@@ -18,21 +18,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     main.cpp \
     searchpopup.cpp \
-    thread.cpp
+    threadpool.cpp
 
 HEADERS += \
     searchpopup.h \
     shortcutinput.hpp \
-    thread.h
+    threadpool.h
 
 RESOURCES += \
     resources.qrc
 
 RC_ICONS = tools.ico
-
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
 
 include(third_party/QHotkey/qhotkey.pri)

@@ -21,8 +21,7 @@
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QVBoxLayout>
 
-#include "thread.h"
-#include <QTime>
+#include "threadpool.h"
 
 using namespace std::chrono_literals;
 class Model : public QAbstractListModel {
