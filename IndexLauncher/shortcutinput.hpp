@@ -11,10 +11,10 @@
 class ShortcutInput : public QLabel {
   Q_OBJECT
  public:
-  ShortcutInput(QWidget* parent = nullptr, Qt::WindowFlags flags = {})
+  explicit ShortcutInput(QWidget* parent = nullptr, Qt::WindowFlags flags = {})
       : ShortcutInput(QKeySequence{}, parent, flags) {}
 
-  ShortcutInput(QKeySequence sequence, QWidget* parent = nullptr,
+  explicit ShortcutInput(QKeySequence sequence, QWidget* parent = nullptr,
                 Qt::WindowFlags flags = {})
       : QLabel(parent, flags), sequence_(sequence) {
     display();

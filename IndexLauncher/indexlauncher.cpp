@@ -24,6 +24,49 @@
 #include "threadpool.h"
 
 using namespace std::literals::chrono_literals;
+
+static const QString kStyleSheets = QStringLiteral("border: none;");
+static constexpr int kMinWidth = 500;
+static constexpr double kOpacity = 0.8;
+
+static constexpr auto kFrameInterval = 10ms;
+
+// [\*\=\"\\\'\/]
+static const auto kSyntaxRegexp = [] {
+  auto regexp = QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
+  regexp.optimize();
+  return regexp;
+}();
+
+// \[(\S+)\]\(\S+\)
+static const auto kLinkRegexp = [] {
+  auto regexp = QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
+  regexp.optimize();
+  return regexp;
+}();
+
+//[\w_]+::([\w_]+)\(
+static const auto kMethodRegexp = [] {
+  auto regexp = QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
+  regexp.optimize();
+  return regexp;
+}();
+
+// [\w_]+::([\w_]+)
+static const auto kMemberRegexp = [] {
+  auto regexp = QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)")};
+  regexp.optimize();
+  return regexp;
+}();
+
+// [\_\,\.\:\(\)\[\]\{\}]
+static const auto kPunctuationRegexp = [] {
+  auto regexp =
+      QRegularExpression{QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
+  regexp.optimize();
+  return regexp;
+}();
+
 class Model : public QAbstractListModel {
   friend class IndexLauncher;
 
@@ -31,12 +74,13 @@ class Model : public QAbstractListModel {
   explicit Model(QObject* parent = nullptr);
 
   void SelectFile(const QString& file = {});
-  void Select(const QModelIndex& index);
+  void Select(const QModelIndex& idx);
   void CopyCurrent();
 
-  virtual int rowCount(const QModelIndex& parent) const override;
-  virtual QVariant data(const QModelIndex& index, int role) const override;
+  int rowCount(const QModelIndex& parent) const override;
+  QVariant data(const QModelIndex& index, int role) const override;
 
+ private:
   QString file_;
 
   // <File, <Title, (Text, Link)>>
@@ -62,9 +106,8 @@ void Model::Select(const QModelIndex& idx) {
   emit dataChanged(prev, prev);
   emit dataChanged(currentIndex_, currentIndex_);
 
-  QListView* list = qobject_cast<QListView*>(parent());
-  QSortFilterProxyModel* filter =
-      qobject_cast<QSortFilterProxyModel*>(list->model());
+  auto list = qobject_cast<QListView*>(parent());
+  auto filter = qobject_cast<QSortFilterProxyModel*>(list->model());
   list->scrollTo(filter->mapFromSource(currentIndex_));
 }
 
@@ -114,10 +157,9 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
       list_(new QListView(this)),
       model_(new Model(list_)),
       filter_(new QSortFilterProxyModel(list_)) {
-  static const QString styleSheets = QStringLiteral("border: none;");
   auto layout = new QVBoxLayout(this);
 
-  input_->setStyleSheet(styleSheets);
+  input_->setStyleSheet(kStyleSheets);
   input_->installEventFilter(this);
   layout->addWidget(input_);
 
@@ -131,7 +173,7 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
   list_->setModel(filter_);
   list_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   list_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  list_->setStyleSheet(styleSheets);
+  list_->setStyleSheet(kStyleSheets);
   list_->setSelectionMode(QAbstractItemView::NoSelection);
   layout->addWidget(list_);
 
@@ -154,31 +196,6 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   progress.setWindowFlags(Qt::Tool | Qt::FramelessWindowHint |
                           Qt::WindowStaysOnTopHint);
   progress.show();
-
-  // [\*\=\"\\\'\/]
-  static const auto kSyntaxRegexp =
-      QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
-  kSyntaxRegexp.optimize();
-
-  // \[(\S+)\]\(\S+\)
-  static const auto kLinkRegexp =
-      QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
-  kLinkRegexp.optimize();
-
-  //[\w_]+::([\w_]+)\(
-  static const auto kMethodRegexp =
-      QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
-  kMethodRegexp.optimize();
-
-  // [\w_]+::([\w_]+)
-  static const auto kMemberRegexp =
-      QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)")};
-  kMemberRegexp.optimize();
-
-  // [\_\,\.\:\(\)\[\]\{\}]
-  static const auto kPunctuationRegexp =
-      QRegularExpression{QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
-  kPunctuationRegexp.optimize();
 
   std::function<void(const QFileInfo&,
                      QMultiMap<QString, QPair<QString, QString>>*)>
@@ -221,8 +238,7 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
       if (titles.isEmpty()) {
         QRegularExpressionMatchIterator it = kMemberRegexp.globalMatch(line);
         while (it.hasNext()) {
-          QRegularExpressionMatch match = it.next();
-          titles << match.captured(1);
+          titles << it.next().captured(1);
         };
       }
 
@@ -252,14 +268,13 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   QVector<QMultiMap<QString, QPair<QString, QString>>> titles;
   titles.resize(files.count());
   futures.reserve(files.count());
-  QElapsedTimer timer;
-  timer.start();
+  auto now = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < files.count(); ++i) {
     futures.emplace_back(
         ThreadPool::default_pool().AddTask(IndexFile, files.at(i), &titles[i]));
-    if (timer.elapsed() > 10) {
-      qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-      timer.restart();
+    if ((std::chrono::high_resolution_clock::now() - now) > kFrameInterval) {
+      QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+      now = std::chrono::high_resolution_clock::now();
     }
   }
 
@@ -267,8 +282,8 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
     // Wait future
     std::future_status status;
     do {
-      qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-      status = futures[i].wait_for(10ms);
+      QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+      status = futures[i].wait_for(kFrameInterval);
     } while (status != std::future_status::ready);
     futures[i].get();
 
@@ -303,17 +318,19 @@ void IndexLauncher::raise() {
   if (window) {
     QScreen* screen = window->screen();
     QRect sGeom = screen->geometry();
-    setFixedWidth(std::max(500, sGeom.width() / 2));
+    setFixedWidth(std::max(kMinWidth, sGeom.width() / 2));
     QRect geom = geometry();
     geom.moveCenter(sGeom.center());
     setGeometry(geom);
   }
-  window->setOpacity(0.8);
+  window->setOpacity(kOpacity);
 }
 
 bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
+  static constexpr int kPageIndexes = 5;
+
   if (event->type() == QEvent::KeyRelease) {
-    switch (static_cast<QKeyEvent*>(event)->key()) {
+    switch (dynamic_cast<QKeyEvent*>(event)->key()) {
       case Qt::Key_Escape:
         hide();
         break;
@@ -331,13 +348,15 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
       } break;
 
       case Qt::Key_PageUp: {
-        int row = filter_->mapFromSource(model_->currentIndex_).row() - 5;
+        int row =
+            filter_->mapFromSource(model_->currentIndex_).row() - kPageIndexes;
         row = (row < 0) ? 0 : row;
         model_->Select(filter_->mapToSource(filter_->index(row, 0)));
       } break;
 
       case Qt::Key_PageDown: {
-        int row = filter_->mapFromSource(model_->currentIndex_).row() + 5;
+        int row =
+            filter_->mapFromSource(model_->currentIndex_).row() + kPageIndexes;
         row = (row >= filter_->rowCount()) ? (filter_->rowCount() - 1) : row;
         model_->Select(filter_->mapToSource(filter_->index(row, 0)));
       } break;

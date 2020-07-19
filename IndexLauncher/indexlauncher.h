@@ -19,7 +19,7 @@ class IndexLauncher : public QFrame {
   void raise();
 
  protected:
-  virtual bool eventFilter(QObject* object, QEvent* event) override;
+  bool eventFilter(QObject* object, QEvent* event) override;
 
  private:
   QLineEdit* input_;

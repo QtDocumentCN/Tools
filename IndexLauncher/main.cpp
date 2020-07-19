@@ -30,6 +30,9 @@ static const QString kFramelessBlurStyleSheets = QStringLiteral(
     "background-color: #aa000000;"
     "color: white;"
     "border: 1px solid royalblue;");
+static constexpr double kOpacity = 0.8;
+static constexpr int kCloseDelay = 250;
+static constexpr int kInformationTime = 5000;
 
 int main(int argc, char* argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -43,10 +46,11 @@ int main(int argc, char* argv[]) {
     QCoreApplication::installTranslator(&translator_zh_CN);
   }
 
-  app.setApplicationName(IndexLauncher::tr("Markdown Index Launcher"));
-  app.setOrganizationName(QStringLiteral("QtDocumentCN"));
-  app.setQuitOnLastWindowClosed(false);
-  app.setWindowIcon(QIcon(QStringLiteral(":/icon/tools.ico")));
+  QCoreApplication::setApplicationName(
+      IndexLauncher::tr("Markdown Index Launcher"));
+  QCoreApplication::setOrganizationName(QStringLiteral("QtDocumentCN"));
+  QGuiApplication::setQuitOnLastWindowClosed(false);
+  QApplication::setWindowIcon(QIcon(QStringLiteral(":/icon/tools.ico")));
 
 #ifdef Q_OS_WIN
   // https://forum.qt.io/topic/101391/windows-10-dark-theme/4
@@ -55,29 +59,32 @@ int main(int argc, char* argv[]) {
                                "ion\\Themes\\Personalize"),
                 QSettings::NativeFormat);
   if (reg.value(QStringLiteral("AppsUseLightTheme")) == 0) {
-    app.setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
+    QApplication::setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
     QPalette darkPalette;
-    QColor darkColor = QColor(43, 43, 43);
-    QColor disabledColor = QColor(127, 127, 127);
-    darkPalette.setColor(QPalette::Window, darkColor);
+    static const QColor kDarkColor = QColor(43, 43, 43);
+    static const QColor kDisabledColor = QColor(127, 127, 127);
+    static const QColor kBaseColor = QColor(30, 30, 30);
+    static const QColor kLinkColor = QColor(0, 153, 188);
+    static const QColor kHighlightColor = QColor(65, 65, 65);
+    darkPalette.setColor(QPalette::Window, kDarkColor);
     darkPalette.setColor(QPalette::WindowText, Qt::white);
-    darkPalette.setColor(QPalette::Base, QColor(30, 30, 30));
-    darkPalette.setColor(QPalette::AlternateBase, darkColor);
+    darkPalette.setColor(QPalette::Base, kBaseColor);
+    darkPalette.setColor(QPalette::AlternateBase, kDarkColor);
     darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
     darkPalette.setColor(QPalette::ToolTipText, Qt::white);
     darkPalette.setColor(QPalette::Text, Qt::white);
-    darkPalette.setColor(QPalette::Disabled, QPalette::Text, disabledColor);
-    darkPalette.setColor(QPalette::Button, darkColor);
+    darkPalette.setColor(QPalette::Disabled, QPalette::Text, kDisabledColor);
+    darkPalette.setColor(QPalette::Button, kDarkColor);
     darkPalette.setColor(QPalette::ButtonText, Qt::white);
     darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText,
-                         disabledColor);
+                         kDisabledColor);
     darkPalette.setColor(QPalette::BrightText, Qt::red);
-    darkPalette.setColor(QPalette::Link, QColor(0, 153, 188));
-    darkPalette.setColor(QPalette::Highlight, QColor(65, 65, 65));
+    darkPalette.setColor(QPalette::Link, kLinkColor);
+    darkPalette.setColor(QPalette::Highlight, kHighlightColor);
     darkPalette.setColor(QPalette::HighlightedText, Qt::white);
     darkPalette.setColor(QPalette::Disabled, QPalette::HighlightedText,
-                         disabledColor);
-    app.setPalette(darkPalette);
+                         kDisabledColor);
+    QApplication::setPalette(darkPalette);
     app.setStyleSheet(QStringLiteral(
         "QWidget:window { border: 1px solid #a0a0a0; }"
         "QMenu { border: 1px solid #a0a0a0; }"
@@ -94,7 +101,7 @@ int main(int argc, char* argv[]) {
 
   // Initialize tray icon
   QSystemTrayIcon tray;
-  tray.setIcon(app.windowIcon());
+  tray.setIcon(QApplication::windowIcon());
   QMenu menu;
 
   // Initialize popup window
@@ -115,14 +122,14 @@ int main(int argc, char* argv[]) {
     bool hotkeyRegistered = hotkey.isRegistered();
     if (hotkeyRegistered) {
       tray.showMessage(
-          qApp->applicationName(),
+          QCoreApplication::applicationName(),
           IndexLauncher::tr("Hotkey %1 is already used!").arg(keys),
           QSystemTrayIcon::Warning);
     } else {
       shortcut = keys;
-      tray.showMessage(qApp->applicationName(),
+      tray.showMessage(QCoreApplication::applicationName(),
                        IndexLauncher::tr("Hotkey is set to %1").arg(keys),
-                       QSystemTrayIcon::Information, 5000);
+                       QSystemTrayIcon::Information, kInformationTime);
     }
     hotkey.setShortcut(shortcut, true);
     return !hotkeyRegistered;
@@ -160,13 +167,13 @@ int main(int argc, char* argv[]) {
           timer.start();
           size_t count = launcher.IndexFiles(files);
           tray.showMessage(
-              qApp->applicationName(),
+              QCoreApplication::applicationName(),
               IndexLauncher::tr(
                   "Index finised for %1 files with %2 titles in %3 ms")
                   .arg(files.count())
                   .arg(count)
                   .arg(timer.elapsed()),
-              QSystemTrayIcon::Information, 5000);
+              QSystemTrayIcon::Information, kInformationTime);
         }
       });
 
@@ -187,7 +194,7 @@ int main(int argc, char* argv[]) {
                 settings.setValue(QStringLiteral("ShortCut"), shortcut);
                 settings.sync();
               }
-              QTimer::singleShot(250, input, SLOT(deleteLater()));
+              QTimer::singleShot(kCloseDelay, input, SLOT(deleteLater()));
             });
         hotkey.setRegistered(false);
         input->setStyleSheet(kFramelessBlurStyleSheets +
@@ -204,7 +211,7 @@ int main(int argc, char* argv[]) {
           geom.moveCenter(screen->geometry().center());
           input->setGeometry(geom);
         }
-        window->setOpacity(0.8);
+        window->setOpacity(kOpacity);
       });
 
   // Action - homepage
@@ -216,12 +223,12 @@ int main(int argc, char* argv[]) {
 
   // Action - exit
   QObject::connect(menu.addAction(IndexLauncher::tr("&Quit")),
-                   &QAction::triggered, [] { qApp->exit(); });
+                   &QAction::triggered, [] { QCoreApplication::exit(); });
 
   // Shot tray icon
   tray.setContextMenu(&menu);
   tray.show();
   ResetHotkey(shortcut);
 
-  return app.exec();
+  return QApplication::exec();
 }

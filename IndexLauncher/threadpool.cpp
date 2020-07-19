@@ -7,6 +7,8 @@
 #include <thread>
 #include <vector>
 
+static constexpr size_t kNumaThreshold = 16;
+
 struct ThreadPoolPrivate {
   mutable std::mutex mutex;
   mutable std::condition_variable condition;
@@ -16,11 +18,11 @@ struct ThreadPoolPrivate {
   std::queue<std::function<void()>> tasks;
 };
 
-ThreadPool::ThreadPool(size_t thread_num)
-    : d_(new ThreadPoolPrivate) {
+ThreadPool::ThreadPool(size_t thread_num) : d_(new ThreadPoolPrivate) {
   if (thread_num == 0) {
     thread_num = std::thread::hardware_concurrency();
-    thread_num = (thread_num >= 8) ? (thread_num + 2) : (thread_num + 1);
+    thread_num =
+        (thread_num >= kNumaThreshold) ? (thread_num + 2) : (thread_num + 1);
   }
 
   std::unique_lock<std::mutex> lock(d_->mutex);
