@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
                          disabledColor);
     app.setPalette(darkPalette);
     app.setStyleSheet(QStringLiteral(
+        "QWidget:window { border: 1px solid #a0a0a0; }"
         "QMenu { border: 1px solid #a0a0a0; }"
         "QToolTip { color: #ffffff; background-color: #2a82da; border: 1px "
         "solid #a0a0a0; }"));
