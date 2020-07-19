@@ -119,13 +119,13 @@ int main(int argc, char* argv[]) {
       menu.addAction(QStringLiteral("索引路径...(&D)")), &QAction::triggered,
       [&settings, &tray, &search] {
         // Recursively traverse dirctory tree
-        std::function<void(QStringList&, const QString&)> Traversal =
-            [&Traversal](QStringList& files, const QString& d) {
+        std::function<void(QFileInfoList&, const QString&)> Traversal =
+            [&Traversal](QFileInfoList& files, const QString& d) {
               QFileInfoList list = QDir{d}.entryInfoList(
                   QDir::NoDotAndDotDot | QDir::Files | QDir::Dirs);
               for (auto&& info : list) {
                 if (info.isFile()) {
-                  files << info.absoluteFilePath();
+                  files << info;
                 } else if (info.isDir()) {
                   Traversal(files, info.absoluteFilePath());
                 }
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
         QString d = QFileDialog::getExistingDirectory(
             nullptr, QStringLiteral("索引路径"), dir);
         if (!d.isEmpty()) {
-          QStringList files;
+          QFileInfoList files;
           dir = d;
           settings.setValue(kDir, d);
           settings.sync();

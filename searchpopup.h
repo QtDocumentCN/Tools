@@ -3,7 +3,7 @@
 
 #include <QtCore/QMultiMap>
 #include <QtCore/QSortFilterProxyModel>
-#include <QtCore/QStringList>
+#include <QtCore/QFileInfoList>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QListView>
@@ -14,7 +14,7 @@ class SearchPopup : public QFrame
  public:
   explicit SearchPopup(QWidget* parent = nullptr, Qt::WindowFlags flags = {});
 
-  size_t IndexFiles(const QStringList& files);
+  size_t IndexFiles(const QFileInfoList& files);
 
   void raise();
 

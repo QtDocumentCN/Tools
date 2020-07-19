@@ -10,7 +10,6 @@
 #include <QtCore/QDebug>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
-#include <QtCore/QFileInfo>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QVector>
 #include <QtGui/QClipboard>
@@ -71,9 +70,14 @@ void Model::Select(const QModelIndex& idx) {
 }
 
 void Model::CopyCurrent() {
+  QChar ch = file_.front();
+  if ((file_.length() > 1) && (ch == QLatin1Char('Q')) &&
+      (file_.at(1).isUpper())) {
+    ch = file_.at(1);
+  }
   QString text =
       QStringLiteral("../../%1/%2/%2.md#%3")
-          .arg(file_.front().toUpper())
+          .arg(ch.toUpper())
           .arg(file_)
           .arg((currentData_->cbegin() + currentIndex_.row()).value().second);
   QGuiApplication::clipboard()->setText(text);
@@ -138,7 +142,7 @@ SearchPopup::SearchPopup(QWidget* parent, Qt::WindowFlags flags)
   });
 }
 
-size_t SearchPopup::IndexFiles(const QStringList& files) {
+size_t SearchPopup::IndexFiles(const QFileInfoList& files) {
   model_->beginResetModel();
   model_->titles_.clear();
 
@@ -270,7 +274,7 @@ size_t SearchPopup::IndexFiles(const QStringList& files) {
     futures[i].get();
 
     // Add result to model
-    model_->titles_[files.at(i)] = titles.at(i);
+    model_->titles_[files.at(i).completeBaseName()] = titles.at(i);
 
     // Update progress
     progress.setValue(progress.value() + 1);
