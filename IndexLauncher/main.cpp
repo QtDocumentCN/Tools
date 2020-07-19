@@ -1,7 +1,9 @@
-﻿#include <functional>
+#include <functional>
 
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFileInfo>
+#include <QtCore/QLocale>
+#include <QtCore/QTranslator>
 #include <QtCore/QTimer>
 #include <QtCore/QSettings>
 #include <QtCore/QUrl>
@@ -32,7 +34,16 @@ static const QString kFramelessBlurStyleSheets = QStringLiteral(
 int main(int argc, char* argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QApplication app(argc, argv);
-  app.setApplicationName(QStringLiteral("Qt中文文档辅助工具"));
+
+  // Install translator
+  QTranslator translator_zh_CN;
+  if (translator_zh_CN.load(
+          QLocale(QLocale::Chinese),
+          QStringLiteral(":/translation/IndexLauncher_zh_CN.qm"))) {
+    QCoreApplication::installTranslator(&translator_zh_CN);
+  }
+
+  app.setApplicationName(IndexLauncher::tr("Markdown Index Launcher"));
   app.setOrganizationName(QStringLiteral("QtDocumentCN"));
   app.setQuitOnLastWindowClosed(false);
   app.setWindowIcon(QIcon(QStringLiteral(":/icon/tools.ico")));
@@ -103,13 +114,14 @@ int main(int argc, char* argv[]) {
     hotkey.setShortcut(QKeySequence{keys, QKeySequence::PortableText});
     bool hotkeyRegistered = hotkey.isRegistered();
     if (hotkeyRegistered) {
-      tray.showMessage(qApp->applicationName(),
-                       QStringLiteral("快捷键 %1 已被占用！").arg(keys),
-                       QSystemTrayIcon::Warning);
+      tray.showMessage(
+          qApp->applicationName(),
+          IndexLauncher::tr("Hotkey %1 is already used!").arg(keys),
+          QSystemTrayIcon::Warning);
     } else {
       shortcut = keys;
       tray.showMessage(qApp->applicationName(),
-                       QStringLiteral("快捷键已被设置为 %1 ").arg(keys),
+                       IndexLauncher::tr("Hotkey is set to %1").arg(keys),
                        QSystemTrayIcon::Information, 5000);
     }
     hotkey.setShortcut(shortcut, true);
@@ -118,8 +130,8 @@ int main(int argc, char* argv[]) {
 
   // Action - index path
   QObject::connect(
-      menu.addAction(QStringLiteral("索引路径...(&D)")), &QAction::triggered,
-      [&settings, &tray, &launcher] {
+      menu.addAction(IndexLauncher::tr("&Indexing path...")),
+      &QAction::triggered, [&settings, &tray, &launcher] {
         // Recursively traverse dirctory tree
         std::function<void(QFileInfoList&, const QString&)> Traversal =
             [&Traversal](QFileInfoList& files, const QString& d) {
@@ -137,7 +149,7 @@ int main(int argc, char* argv[]) {
         static const QString kDir = QStringLiteral("Dir");
         QString dir = settings.value(kDir).toString();
         QString d = QFileDialog::getExistingDirectory(
-            nullptr, QStringLiteral("索引路径"), dir);
+            nullptr, IndexLauncher::tr("Indexing path"), dir);
         if (!d.isEmpty()) {
           QFileInfoList files;
           dir = d;
@@ -149,7 +161,8 @@ int main(int argc, char* argv[]) {
           size_t count = launcher.IndexFiles(files);
           tray.showMessage(
               qApp->applicationName(),
-              QStringLiteral("完成索引，共 %1 个文件，%2 条标题，耗时 %3 ms")
+              IndexLauncher::tr(
+                  "Index finised for %1 files with %2 titles in %3 ms")
                   .arg(files.count())
                   .arg(count)
                   .arg(timer.elapsed()),
@@ -159,7 +172,7 @@ int main(int argc, char* argv[]) {
 
   // Action - set shortcut
   QObject::connect(
-      menu.addAction(QStringLiteral("设置快捷键(&S)")), &QAction::triggered,
+      menu.addAction(IndexLauncher::tr("&Set hotkey")), &QAction::triggered,
       [&settings, &shortcut, &hotkey, &ResetHotkey] {
         auto input = new ShortcutInput(
             QKeySequence(shortcut, QKeySequence::PortableText), nullptr,
@@ -196,13 +209,13 @@ int main(int argc, char* argv[]) {
 
   // Action - homepage
   QObject::connect(
-      menu.addAction(QStringLiteral("主页(&H)")), &QAction::triggered, [] {
+      menu.addAction(IndexLauncher::tr("&Homepage")), &QAction::triggered, [] {
         QDesktopServices::openUrl(
             QUrl{QStringLiteral("https://github.com/QtDocumentCN")});
       });
 
   // Action - exit
-  QObject::connect(menu.addAction(QStringLiteral("退出(&Q)")),
+  QObject::connect(menu.addAction(IndexLauncher::tr("&Quit")),
                    &QAction::triggered, [] { qApp->exit(); });
 
   // Shot tray icon

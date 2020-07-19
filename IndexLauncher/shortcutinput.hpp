@@ -1,4 +1,4 @@
-﻿#ifndef QTDOCUMENTCN_TOOLS_SHORTCUTINPUT_HPP
+#ifndef QTDOCUMENTCN_TOOLS_SHORTCUTINPUT_HPP
 #define QTDOCUMENTCN_TOOLS_SHORTCUTINPUT_HPP
 
 #include <Qt>
@@ -77,7 +77,7 @@ class ShortcutInput : public QLabel {
  private:
   void display() {
     if (sequence_.isEmpty() && (modifiers_ == Qt::NoModifier) && (key_ != 0)) {
-      setText(QStringLiteral("请按下按键"));
+      setText(tr("Press any shortcut"));
     } else {
       setText(sequence().toString(QKeySequence::PortableText));
     }

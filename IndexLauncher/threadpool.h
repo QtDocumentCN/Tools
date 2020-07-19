@@ -1,4 +1,4 @@
-﻿#ifndef QTDOCUMENTCN_TOOLS_THREAD_H
+#ifndef QTDOCUMENTCN_TOOLS_THREAD_H
 #define QTDOCUMENTCN_TOOLS_THREAD_H
 
 #include <cstdint>

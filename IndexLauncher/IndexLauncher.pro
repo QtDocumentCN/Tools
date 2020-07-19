@@ -30,4 +30,6 @@ RESOURCES += \
 
 RC_ICONS = tools.ico
 
+TRANSLATIONS += IndexLauncher_zh_CN.ts
+
 include(third_party/QHotkey/qhotkey.pri)

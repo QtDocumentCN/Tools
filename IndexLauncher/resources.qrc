@@ -2,4 +2,7 @@
     <qresource prefix="/icon">
         <file>tools.ico</file>
     </qresource>
+    <qresource prefix="/translation">
+        <file>IndexLauncher_zh_CN.qm</file>
+    </qresource>
 </RCC>

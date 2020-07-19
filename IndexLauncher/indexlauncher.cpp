@@ -1,4 +1,4 @@
-﻿#include "indexlauncher.h"
+#include "indexlauncher.h"
 
 #include <atomic>
 #include <chrono>
@@ -292,7 +292,7 @@ void IndexLauncher::raise() {
 
   model_->SelectFile();
   input_->clear();
-  input_->setPlaceholderText(QStringLiteral("请输入类名/文件名"));
+  input_->setPlaceholderText(tr("Please enter file name or class name"));
   emit input_->textChanged({});
 
   show();
@@ -346,7 +346,7 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
       case Qt::Key_Enter: {
         if (model_->file_.isEmpty()) {
           model_->SelectFile(model_->currentIndex_.data().toString());
-          input_->setPlaceholderText(QStringLiteral("请输入标题"));
+          input_->setPlaceholderText(tr("Please enter title"));
           input_->clear();
         } else {
           model_->CopyCurrent();

@@ -1,4 +1,4 @@
-﻿#ifndef QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
+#ifndef QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
 #define QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
 
 #include <QtCore/QMultiMap>
@@ -10,6 +10,7 @@
 
 class Model;
 class IndexLauncher : public QFrame {
+  Q_OBJECT
  public:
   explicit IndexLauncher(QWidget* parent = nullptr, Qt::WindowFlags flags = {});
 
