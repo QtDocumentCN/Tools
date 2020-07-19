@@ -16,6 +16,7 @@
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QSystemTrayIcon>
 
 #include <QHotkey>
@@ -35,6 +36,43 @@ int main(int argc, char* argv[]) {
   app.setOrganizationName(QStringLiteral("QtDocumentCN"));
   app.setQuitOnLastWindowClosed(false);
   app.setWindowIcon(QIcon(QStringLiteral(":/icon/tools.ico")));
+
+#ifdef Q_OS_WIN
+  // https://forum.qt.io/topic/101391/windows-10-dark-theme/4
+  QSettings reg(QStringLiteral("HKEY_CURRENT_"
+                               "USER\\Software\\Microsoft\\Windows\\CurrentVers"
+                               "ion\\Themes\\Personalize"),
+                QSettings::NativeFormat);
+  if (reg.value(QStringLiteral("AppsUseLightTheme")) == 0) {
+    app.setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
+    QPalette darkPalette;
+    QColor darkColor = QColor(43, 43, 43);
+    QColor disabledColor = QColor(127, 127, 127);
+    darkPalette.setColor(QPalette::Window, darkColor);
+    darkPalette.setColor(QPalette::WindowText, Qt::white);
+    darkPalette.setColor(QPalette::Base, QColor(30, 30, 30));
+    darkPalette.setColor(QPalette::AlternateBase, darkColor);
+    darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
+    darkPalette.setColor(QPalette::ToolTipText, Qt::white);
+    darkPalette.setColor(QPalette::Text, Qt::white);
+    darkPalette.setColor(QPalette::Disabled, QPalette::Text, disabledColor);
+    darkPalette.setColor(QPalette::Button, darkColor);
+    darkPalette.setColor(QPalette::ButtonText, Qt::white);
+    darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText,
+                         disabledColor);
+    darkPalette.setColor(QPalette::BrightText, Qt::red);
+    darkPalette.setColor(QPalette::Link, QColor(0, 153, 188));
+    darkPalette.setColor(QPalette::Highlight, QColor(65, 65, 65));
+    darkPalette.setColor(QPalette::HighlightedText, Qt::white);
+    darkPalette.setColor(QPalette::Disabled, QPalette::HighlightedText,
+                         disabledColor);
+    app.setPalette(darkPalette);
+    app.setStyleSheet(QStringLiteral(
+        "QMenu { border: 1px solid #a0a0a0; }"
+        "QToolTip { color: #ffffff; background-color: #2a82da; border: 1px "
+        "solid #a0a0a0; }"));
+  }
+#endif
 
   // Read shortcut from settings
   QSettings settings(QStringLiteral("config.ini"), QSettings::IniFormat);
