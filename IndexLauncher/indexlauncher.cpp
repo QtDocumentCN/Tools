@@ -1,4 +1,4 @@
-﻿#include "searchpopup.h"
+﻿#include "indexlauncher.h"
 
 #include <atomic>
 #include <chrono>
@@ -25,7 +25,7 @@
 
 using namespace std::literals::chrono_literals;
 class Model : public QAbstractListModel {
-  friend class SearchPopup;
+  friend class IndexLauncher;
 
  public:
   explicit Model(QObject* parent = nullptr);
@@ -108,7 +108,7 @@ QVariant Model::data(const QModelIndex& index, int role) const {
   return {};
 }
 
-SearchPopup::SearchPopup(QWidget* parent, Qt::WindowFlags flags)
+IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
     : QFrame(parent, flags),
       input_(new QLineEdit(this)),
       list_(new QListView(this)),
@@ -141,7 +141,7 @@ SearchPopup::SearchPopup(QWidget* parent, Qt::WindowFlags flags)
   });
 }
 
-size_t SearchPopup::IndexFiles(const QFileInfoList& files) {
+size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   model_->beginResetModel();
   model_->titles_.clear();
 
@@ -284,7 +284,7 @@ size_t SearchPopup::IndexFiles(const QFileInfoList& files) {
   return count.load();
 }
 
-void SearchPopup::raise() {
+void IndexLauncher::raise() {
   if (isVisible()) {
     hide();
     return;
@@ -311,7 +311,7 @@ void SearchPopup::raise() {
   window->setOpacity(0.8);
 }
 
-bool SearchPopup::eventFilter(QObject* object, QEvent* event) {
+bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
   if (event->type() == QEvent::KeyRelease) {
     switch (static_cast<QKeyEvent*>(event)->key()) {
       case Qt::Key_Escape:

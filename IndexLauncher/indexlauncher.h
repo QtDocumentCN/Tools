@@ -1,5 +1,5 @@
-﻿#ifndef QTDOCUMENTCN_TOOLS_SEARCHPOPUP_H
-#define QTDOCUMENTCN_TOOLS_SEARCHPOPUP_H
+﻿#ifndef QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
+#define QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
 
 #include <QtCore/QMultiMap>
 #include <QtCore/QSortFilterProxyModel>
@@ -9,10 +9,9 @@
 #include <QtWidgets/QListView>
 
 class Model;
-class SearchPopup : public QFrame
-{
+class IndexLauncher : public QFrame {
  public:
-  explicit SearchPopup(QWidget* parent = nullptr, Qt::WindowFlags flags = {});
+  explicit IndexLauncher(QWidget* parent = nullptr, Qt::WindowFlags flags = {});
 
   size_t IndexFiles(const QFileInfoList& files);
 
@@ -28,4 +27,4 @@ class SearchPopup : public QFrame
   QSortFilterProxyModel* filter_;
 };
 
-#endif // QTDOCUMENTCN_TOOLS_SEARCHPOPUP_H
+#endif  // QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H

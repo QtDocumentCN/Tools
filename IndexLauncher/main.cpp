@@ -21,7 +21,7 @@
 
 #include <QHotkey>
 
-#include "searchpopup.h"
+#include "indexlauncher.h"
 #include "shortcutinput.hpp"
 
 static const QString kFramelessBlurStyleSheets = QStringLiteral(
@@ -87,13 +87,14 @@ int main(int argc, char* argv[]) {
   QMenu menu;
 
   // Initialize popup window
-  SearchPopup search{nullptr, Qt::SplashScreen | Qt::FramelessWindowHint |
-                                  Qt::WindowStaysOnTopHint};
-  search.setStyleSheet(kFramelessBlurStyleSheets);
+  IndexLauncher launcher{nullptr, Qt::SplashScreen | Qt::FramelessWindowHint |
+                                      Qt::WindowStaysOnTopHint};
+  launcher.setStyleSheet(kFramelessBlurStyleSheets);
 
   // Initialize global hotkey
   QHotkey hotkey{QKeySequence{shortcut, QKeySequence::PortableText}};
-  QObject::connect(&hotkey, &QHotkey::activated, &search, &SearchPopup::raise);
+  QObject::connect(&hotkey, &QHotkey::activated, &launcher,
+                   &IndexLauncher::raise);
 
   // Reset hotkey
   auto ResetHotkey = [&shortcut, &tray, &hotkey](const QString& keys) -> bool {
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
   // Action - index path
   QObject::connect(
       menu.addAction(QStringLiteral("索引路径...(&D)")), &QAction::triggered,
-      [&settings, &tray, &search] {
+      [&settings, &tray, &launcher] {
         // Recursively traverse dirctory tree
         std::function<void(QFileInfoList&, const QString&)> Traversal =
             [&Traversal](QFileInfoList& files, const QString& d) {
@@ -145,7 +146,7 @@ int main(int argc, char* argv[]) {
           Traversal(files, d);
           QElapsedTimer timer;
           timer.start();
-          size_t count = search.IndexFiles(files);
+          size_t count = launcher.IndexFiles(files);
           tray.showMessage(
               qApp->applicationName(),
               QStringLiteral("完成索引，共 %1 个文件，%2 条标题，耗时 %3 ms")
