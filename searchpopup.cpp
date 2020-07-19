@@ -24,7 +24,7 @@
 #include "thread.h"
 #include <QTime>
 
-using namespace std::chrono_literals;
+using namespace std::literals::chrono_literals;
 class Model : public QAbstractListModel {
   friend class SearchPopup;
 
