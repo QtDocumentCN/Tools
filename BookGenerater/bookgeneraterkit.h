@@ -3,6 +3,8 @@
 
 #include <QObject>
 
+class QTextStream;
+
 class BookGeneraterKit : public QObject
 {
 	Q_OBJECT
@@ -11,6 +13,11 @@ public:
 
 public:
 	bool generaterSummary();
+
+private:
+	void _generaterFile(QTextStream&);
+	void _generaterHeader(QTextStream&);
+	void _generaterBody(QTextStream&);
 
 signals:
 
