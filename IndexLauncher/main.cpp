@@ -35,6 +35,11 @@ static constexpr double kOpacity = 0.8;
 static constexpr int kCloseDelay = 250;
 static constexpr int kInformationTime = 5000;
 
+static const QString kOrganizationUrl =
+    QStringLiteral("https://github.com/QtDocumentCN");
+static const QString kBsdUrl = QStringLiteral(
+    "https://tldrlegal.com/license/bsd-3-clause-license-(revised)");
+
 int main(int argc, char* argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QApplication app(argc, argv);
@@ -218,12 +223,47 @@ int main(int argc, char* argv[]) {
         }
       });
 
-  // Action - homepage
+  menu.addSeparator();
+
+  // Action - help
   QObject::connect(
-      menu.addAction(IndexLauncher::tr("&Homepage")), &QAction::triggered, [] {
-        QDesktopServices::openUrl(
-            QUrl{QStringLiteral("https://github.com/QtDocumentCN")});
+      menu.addAction(IndexLauncher::tr("&Help")), &QAction::triggered, &menu,
+      [&shortcut] {
+        QMessageBox box;
+        box.setWindowTitle(IndexLauncher::tr("Help"));
+        box.setTextFormat(Qt::RichText);
+        box.setText(IndexLauncher::tr("<h1>Markdown Index Launcher</h1>\
+<p>This tool can index markdown files, and help you to search titles, retrieve it's html link into clipboard.</p>\
+<p>\
+<h2>Index path</h2>\
+  <ul>\
+  <li>File link generation:</li>\
+    <ol>\
+    <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.</li>\
+    <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
+    <li>Press %1 again, the html link will be generated into clipboard.<li/>\
+    </ol>\
+  <li>Title link generation</li>\
+    <ol>\
+    <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.<li/>\
+    <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
+    <li>Press Enter, then the list will show titles under the class/file.<li/>\
+    <li>Select correspond title in same way.<li/>\
+    <li>Press Enter, the html link will be generated into clipboard.</li>\
+  </ul>\
+<h2>Set hotkey:</h2>\
+  <ul><li>Set hotkey for index launcher, current is %1.<li/>\
+</p>\
+<p>Copyleft <a href=%2>QtDocumentCN</a> with <a href=%3>3-Clause BSD License</a>.</p>")
+                        .arg(shortcut, kOrganizationUrl, kBsdUrl));
+        box.setIconPixmap(QApplication::windowIcon().pixmap(64, 64));
+        box.exec();
       });
+
+  // Action - homepage
+  QObject::connect(menu.addAction(IndexLauncher::tr("Ho&mepage")),
+                   &QAction::triggered,
+                   [] { QDesktopServices::openUrl(QUrl{kOrganizationUrl}); });
 
   // Action - exit
   QObject::connect(menu.addAction(IndexLauncher::tr("&Quit")),
