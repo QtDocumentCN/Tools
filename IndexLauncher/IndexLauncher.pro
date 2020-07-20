@@ -1,6 +1,8 @@
-QT       += core gui
+QT       += core gui widgets
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+lessThan(QT_VERSION, 5.14) {
+message("Qt 5.14 required, current version: $$QT_VERSION")
+}
 
 CONFIG += c++14
 

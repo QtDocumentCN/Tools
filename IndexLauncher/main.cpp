@@ -15,10 +15,13 @@
 #include <QtGui/QWindow>
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QBoxLayout>
+#include <QtWidgets/QDialog>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMenu>
-#include <QtWidgets/QMessageBox>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QSystemTrayIcon>
 
@@ -34,11 +37,74 @@ static const QString kFramelessBlurStyleSheets = QStringLiteral(
 static constexpr double kOpacity = 0.8;
 static constexpr int kCloseDelay = 250;
 static constexpr int kInformationTime = 5000;
+static constexpr QSize kHelpIconSize{64, 64};
 
 static const QString kOrganizationUrl =
     QStringLiteral("https://github.com/QtDocumentCN");
 static const QString kBsdUrl = QStringLiteral(
     "https://tldrlegal.com/license/bsd-3-clause-license-(revised)");
+
+void ShowHelp(const QString& shortcut) {
+  QDialog dialog{nullptr, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint};
+  dialog.setWindowTitle(IndexLauncher::tr("Help"));
+
+  auto layout = new QVBoxLayout(&dialog);
+
+  {
+    auto title_layout = new QHBoxLayout;
+    title_layout->setAlignment(Qt::AlignLeft);
+    layout->addLayout(title_layout);
+
+    auto icon = new QLabel(&dialog);
+    icon->setPixmap(QApplication::windowIcon().pixmap(kHelpIconSize));
+    title_layout->addWidget(icon);
+
+    auto title =
+        new QLabel(IndexLauncher::tr("# Markdown Index Launcher\n"), &dialog);
+    title->setTextFormat(Qt::MarkdownText);
+    title_layout->addWidget(title);
+  }
+
+  auto text = new QLabel(IndexLauncher::tr("\
+This tool can index markdown files, and help you to search titles, retrieve it's link into clipboard.\n\
+\n----\n\
+\n## Index path\n\
+- File link generation:\n\
+    1. Press %1 to open the index launcher, class/file name in clipboard will be auto filled.\n\
+    2. Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.\n\
+    3. Press %1, the link will be generated into clipboard.\n\
+- Title link generation\n\
+    1. Press %1 to open the index launcher, class/file name in clipboard will be auto filled.\n\
+    2. Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.\n\
+    3. Press Enter, then the list will show titles under the class/file.\n\
+    4. Select correspond title in same way.\n\
+        - Press Enter, file#title link will be generated into clipboard.\n\
+        - Press %1, #title link will be generated into clipboard.\n\
+\n## Set hotkey\n\
+Set hotkey for index launcher, current is %1.\n\
+\n----\n\
+\nCopyleft [QtDocumentCN](%2) with [3-Clause BSD License](%3).")
+                             .arg(shortcut, kOrganizationUrl, kBsdUrl));
+  text->setTextFormat(Qt::MarkdownText);
+  layout->addWidget(text);
+
+  {
+    auto button_layout = new QHBoxLayout;
+    button_layout->setAlignment(Qt::AlignRight);
+    layout->addLayout(button_layout);
+
+    auto about_qt = new QPushButton(IndexLauncher::tr("About &Qt..."), &dialog);
+    button_layout->addWidget(about_qt);
+    QObject::connect(about_qt, &QPushButton::clicked, &QApplication::aboutQt);
+
+    auto ok = new QPushButton(IndexLauncher::tr("&Ok"), &dialog);
+    button_layout->addWidget(ok);
+    ok->setFocus();
+    QObject::connect(ok, &QPushButton::clicked, &dialog, &QDialog::accept);
+  }
+
+  dialog.exec();
+}
 
 int main(int argc, char* argv[]) {
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -227,42 +293,9 @@ int main(int argc, char* argv[]) {
   menu.addSeparator();
 
   // Action - help
-  QObject::connect(
-      menu.addAction(IndexLauncher::tr("&Help")), &QAction::triggered, &menu,
-      [&shortcut] {
-        QMessageBox box;
-        box.setWindowTitle(IndexLauncher::tr("Help"));
-        box.setTextFormat(Qt::RichText);
-        box.setText(IndexLauncher::tr("<h1>Markdown Index Launcher</h1>\
-<p>This tool can index markdown files, and help you to search titles, retrieve it's link into clipboard.</p>\
-<p>\
-<h2>Index path</h2>\
-  <ul>\
-  <li>File link generation:</li>\
-    <ol>\
-    <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.</li>\
-    <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
-    <li>Press %1, the link will be generated into clipboard.<li/>\
-    </ol>\
-  <li>Title link generation</li>\
-    <ol>\
-    <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.<li/>\
-    <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
-    <li>Press Enter, then the list will show titles under the class/file.<li/>\
-    <li>Select correspond title in same way.<li/>\
-    <ul>\
-      <li>Press Enter, file#title link will be generated into clipboard.</li>\
-      <li>Press %1, #title link will be generated into clipboard.</li>\
-    </ul>\
-  </ul>\
-<h2>Set hotkey:</h2>\
-  <ul><li>Set hotkey for index launcher, current is %1.<li/>\
-</p>\
-<p>Copyleft <a href=%2>QtDocumentCN</a> with <a href=%3>3-Clause BSD License</a>.</p>")
-                        .arg(shortcut, kOrganizationUrl, kBsdUrl));
-        box.setIconPixmap(QApplication::windowIcon().pixmap(64, 64));
-        box.exec();
-      });
+  QObject::connect(menu.addAction(IndexLauncher::tr("&Help")),
+                   &QAction::triggered, &menu,
+                   [&shortcut] { ShowHelp(shortcut); });
 
   // Action - homepage
   QObject::connect(menu.addAction(IndexLauncher::tr("Ho&mepage")),

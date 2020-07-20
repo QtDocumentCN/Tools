@@ -73,9 +73,9 @@ class Model : public QAbstractListModel {
 class HtmlDelegate : public QStyledItemDelegate {
  protected:
   void paint(QPainter* painter, const QStyleOptionViewItem& option,
-             const QModelIndex& index) const;
+             const QModelIndex& index) const override;
   QSize sizeHint(const QStyleOptionViewItem& option,
-                 const QModelIndex& index) const;
+                 const QModelIndex& index) const override;
  private:
   friend class IndexLauncher;
   friend class Model;
@@ -124,7 +124,7 @@ QVariant Model::data(const QModelIndex& index, int role) const {
     case Qt::DisplayRole:
       if (currentData_) {
         auto it = currentData_->cbegin() + index.row();
-        return QStringLiteral("<b>%1</b><br/>%2").arg(it.key(), it.value().first);
+        return QStringLiteral("**%1**\n%2").arg(it.key(), it.value().first);
       } else {
         return (titles_.cbegin() + index.row()).key();
       }
@@ -149,7 +149,7 @@ void HtmlDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
   painter->save();
 
   QTextDocument doc;
-  doc.setHtml(options.text);
+  doc.setMarkdown(options.text);
 
   options.text.clear();
   options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options,
@@ -181,9 +181,9 @@ QSize HtmlDelegate::sizeHint(const QStyleOptionViewItem& option,
   initStyleOption(&options, index);
 
   QTextDocument doc;
-  doc.setHtml(options.text);
+  doc.setMarkdown(options.text);
   doc.setTextWidth(options.rect.width());
-  return QSize(doc.idealWidth(), doc.size().height());
+  return {int(doc.idealWidth()), int(doc.size().height())};
 }
 
 IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
@@ -319,7 +319,7 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
       line.replace(kPunctuationRegexp, QString{});
       line.replace(QLatin1Char('\t'), QLatin1Char('-'));
       if (titles.isEmpty()) {
-        titles = line.split(QLatin1Char(' '), QString::SkipEmptyParts);
+        titles = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
       }
       line.replace(QLatin1Char(' '), QLatin1Char('-'));
       line = line.toLower();
