@@ -86,10 +86,12 @@ int main(int argc, char* argv[]) {
                          kDisabledColor);
     QApplication::setPalette(darkPalette);
     app.setStyleSheet(QStringLiteral(
-        "QWidget:window { border: 1px solid #a0a0a0; }"
-        "QMenu { border: 1px solid #a0a0a0; }"
-        "QToolTip { color: #ffffff; background-color: #2a82da; border: 1px "
-        "solid #a0a0a0; }"));
+        "QWidget:window { border: 1px solid #a0a0a0; } "
+        "QMenu { border: 1px solid #a0a0a0; } "
+        "QMenu::separator { height: 1px; margin: 5px 10px 5px 10px; "
+        "background: #808080} "
+        "QToolTip { color: #ffffff; background-color: #2a82da; "
+        "border: 1px solid #a0a0a0; }"));
   }
 #endif
 
