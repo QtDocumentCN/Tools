@@ -7,17 +7,20 @@
 #include <QtCore/QAbstractTableModel>
 #include <QtCore/QBitArray>
 #include <QtCore/QCoreApplication>
-#include <QtCore/QDebug>
 #include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QVector>
+#include <QtGui/QAbstractTextDocumentLayout>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
+#include <QtGui/QPainter>
 #include <QtGui/QScreen>
+#include <QtGui/QTextDocument>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QWindow>
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QScrollBar>
+#include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QVBoxLayout>
 
 #include "threadpool.h"
@@ -44,8 +47,6 @@ QString FilePath(QString file) {
 }
 
 class Model : public QAbstractListModel {
-  friend class IndexLauncher;
-
  public:
   explicit Model(QObject* parent = nullptr);
 
@@ -57,12 +58,28 @@ class Model : public QAbstractListModel {
   QVariant data(const QModelIndex& index, int role) const override;
 
  private:
+  friend class IndexLauncher;
+  friend class HtmlDelegate;
+
   QString file_;
 
   // <File, <Title, (Text, Link)>>
   QMap<QString, QMultiMap<QString, QPair<QString, QString>>> titles_;
   QMultiMap<QString, QPair<QString, QString>>* currentData_ = nullptr;
   QModelIndex currentIndex_;
+};
+
+// https://stackoverflow.com/questions/1956542/how-to-make-item-view-render-rich-html-text-in-qt
+class HtmlDelegate : public QStyledItemDelegate {
+ protected:
+  void paint(QPainter* painter, const QStyleOptionViewItem& option,
+             const QModelIndex& index) const;
+  QSize sizeHint(const QStyleOptionViewItem& option,
+                 const QModelIndex& index) const;
+ private:
+  friend class IndexLauncher;
+  friend class Model;
+  Model* model_ = nullptr;
 };
 
 Model::Model(QObject* parent) : QAbstractListModel(parent) {}
@@ -107,7 +124,7 @@ QVariant Model::data(const QModelIndex& index, int role) const {
     case Qt::DisplayRole:
       if (currentData_) {
         auto it = currentData_->cbegin() + index.row();
-        return QStringLiteral("%1\n%2").arg(it.key(), it.value().first);
+        return QStringLiteral("<b>%1</b><br/>%2").arg(it.key(), it.value().first);
       } else {
         return (titles_.cbegin() + index.row()).key();
       }
@@ -122,6 +139,51 @@ QVariant Model::data(const QModelIndex& index, int role) const {
       break;
   }
   return {};
+}
+
+void HtmlDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
+                         const QModelIndex& index) const {
+  QStyleOptionViewItem options = option;
+  initStyleOption(&options, index);
+
+  painter->save();
+
+  QTextDocument doc;
+  doc.setHtml(options.text);
+
+  options.text.clear();
+  options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options,
+                                       painter);
+
+  // shift text right to make icon visible
+  QSize iconSize = options.icon.actualSize(options.rect.size());
+  painter->translate(options.rect.left() + iconSize.width(),
+                     options.rect.top());
+  QRect clip(0, 0, options.rect.width() + iconSize.width(),
+             options.rect.height());
+
+  // doc.drawContents(painter, clip);
+
+  painter->setClipRect(clip);
+  QAbstractTextDocumentLayout::PaintContext ctx;
+  // set text color to red for selected item
+  if (option.state & QStyle::State_Selected)
+    ctx.palette.setColor(QPalette::Text, QColor("red"));
+  ctx.clip = clip;
+  doc.documentLayout()->draw(painter, ctx);
+
+  painter->restore();
+}
+
+QSize HtmlDelegate::sizeHint(const QStyleOptionViewItem& option,
+                             const QModelIndex& index) const {
+  QStyleOptionViewItem options = option;
+  initStyleOption(&options, index);
+
+  QTextDocument doc;
+  doc.setHtml(options.text);
+  doc.setTextWidth(options.rect.width());
+  return QSize(doc.idealWidth(), doc.size().height());
 }
 
 IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
@@ -144,6 +206,9 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
   filter_->setSourceModel(model_);
   filter_->setFilterCaseSensitivity(Qt::CaseInsensitive);
   list_->setModel(filter_);
+  auto delegate = new HtmlDelegate;
+  delegate->model_ = model_;
+  list_->setItemDelegate(delegate);
   list_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   list_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   list_->setStyleSheet(kStyleSheets);
@@ -157,6 +222,7 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
 }
 
 size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
+  hide();
   model_->beginResetModel();
   model_->titles_.clear();
 
@@ -302,6 +368,10 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   }
 
   model_->endResetModel();
+
+  // Item height for first display is wrong, so trigger & hide to avoid it.
+  Trigger();
+  hide();
 
   return count.load();
 }

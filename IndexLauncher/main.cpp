@@ -122,7 +122,9 @@ int main(int argc, char* argv[]) {
                    &IndexLauncher::Trigger);
 
   // Reset hotkey
-  auto ResetHotkey = [&shortcut, &tray, &hotkey](const QString& keys) -> bool {
+  auto ResetHotkey = [&shortcut, &tray, &hotkey,
+                      &launcher](const QString& keys) -> bool {
+    launcher.hide();
     hotkey.setRegistered(false);
     hotkey.setShortcut(QKeySequence{keys, QKeySequence::PortableText});
     bool hotkeyRegistered = hotkey.isRegistered();
