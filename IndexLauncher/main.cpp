@@ -18,6 +18,7 @@
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QMessageBox>
 #include <QtWidgets/QStyleFactory>
 #include <QtWidgets/QSystemTrayIcon>
 
@@ -118,7 +119,6 @@ int main(int argc, char* argv[]) {
 
   // Reset hotkey
   auto ResetHotkey = [&shortcut, &tray, &hotkey](const QString& keys) -> bool {
-    QString prev = shortcut;
     hotkey.setRegistered(false);
     hotkey.setShortcut(QKeySequence{keys, QKeySequence::PortableText});
     bool hotkeyRegistered = hotkey.isRegistered();
@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
   // Action - index path
   QObject::connect(
       menu.addAction(IndexLauncher::tr("&Indexing path...")),
-      &QAction::triggered, [&settings, &tray, &launcher] {
+      &QAction::triggered, &menu, [&settings, &tray, &launcher] {
         // Recursively traverse dirctory tree
         std::function<void(QFileInfoList&, const QString&)> Traversal =
             [&Traversal](QFileInfoList& files, const QString& d) {
@@ -182,14 +182,17 @@ int main(int argc, char* argv[]) {
   // Action - set shortcut
   QObject::connect(
       menu.addAction(IndexLauncher::tr("&Set hotkey")), &QAction::triggered,
-      [&settings, &shortcut, &hotkey, &ResetHotkey] {
+      &menu, [&settings, &shortcut, &hotkey, &ResetHotkey] {
         auto input = new ShortcutInput(
             QKeySequence(shortcut, QKeySequence::PortableText), nullptr,
             Qt::SplashScreen | Qt::FramelessWindowHint |
                 Qt::WindowStaysOnTopHint);
+        input->setAttribute(Qt::WA_DeleteOnClose);
+        input->setStyleSheet(kFramelessBlurStyleSheets +
+                             QStringLiteral("padding: 5px; font: 28pt;"));
 
         QObject::connect(
-            input, &ShortcutInput::finished,
+            input, &ShortcutInput::finished, input,
             [&settings, &shortcut, &ResetHotkey, input](const QString& keys) {
               if (ResetHotkey(keys)) {
                 shortcut = keys;
@@ -198,9 +201,8 @@ int main(int argc, char* argv[]) {
               }
               QTimer::singleShot(kCloseDelay, input, SLOT(deleteLater()));
             });
+
         hotkey.setRegistered(false);
-        input->setStyleSheet(kFramelessBlurStyleSheets +
-                             QStringLiteral("padding: 5px; font: 28pt;"));
         input->resize(input->sizeHint());
         input->show();
         input->raise();
@@ -212,8 +214,8 @@ int main(int argc, char* argv[]) {
           QRect geom = input->geometry();
           geom.moveCenter(screen->geometry().center());
           input->setGeometry(geom);
+          window->setOpacity(kOpacity);
         }
-        window->setOpacity(kOpacity);
       });
 
   // Action - homepage
