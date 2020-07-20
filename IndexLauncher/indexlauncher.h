@@ -16,7 +16,7 @@ class IndexLauncher : public QFrame {
 
   size_t IndexFiles(const QFileInfoList& files);
 
-  void raise();
+  void Trigger();
 
  protected:
   bool eventFilter(QObject* object, QEvent* event) override;

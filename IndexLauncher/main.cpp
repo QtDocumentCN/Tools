@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
   // Initialize global hotkey
   QHotkey hotkey{QKeySequence{shortcut, QKeySequence::PortableText}};
   QObject::connect(&hotkey, &QHotkey::activated, &launcher,
-                   &IndexLauncher::raise);
+                   &IndexLauncher::Trigger);
 
   // Reset hotkey
   auto ResetHotkey = [&shortcut, &tray, &hotkey](const QString& keys) -> bool {

@@ -8,7 +8,6 @@
 #include <QtCore/QBitArray>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDebug>
-#include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QVector>
@@ -31,41 +30,18 @@ static constexpr double kOpacity = 0.8;
 
 static constexpr auto kFrameInterval = 10ms;
 
-// [\*\=\"\\\'\/]
-static const auto kSyntaxRegexp = [] {
-  auto regexp = QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
-  regexp.optimize();
-  return regexp;
-}();
+inline bool IsValidFile(const QString& file) {
+  return (file.length() > 1) && (file.at(0) == QLatin1Char('Q')) &&
+         (file.at(1).isUpper());
+}
 
-// \[(\S+)\]\(\S+\)
-static const auto kLinkRegexp = [] {
-  auto regexp = QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
-  regexp.optimize();
-  return regexp;
-}();
-
-//[\w_]+::([\w_]+)\(
-static const auto kMethodRegexp = [] {
-  auto regexp = QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
-  regexp.optimize();
-  return regexp;
-}();
-
-// [\w_]+::([\w_]+)
-static const auto kMemberRegexp = [] {
-  auto regexp = QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)")};
-  regexp.optimize();
-  return regexp;
-}();
-
-// [\_\,\.\:\(\)\[\]\{\}]
-static const auto kPunctuationRegexp = [] {
-  auto regexp =
-      QRegularExpression{QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
-  regexp.optimize();
-  return regexp;
-}();
+QString FilePath(QString file) {
+  if (file.endsWith(QStringLiteral(".md"))) {
+    file = file.left(file.length() - 3);
+  }
+  QChar ch = IsValidFile(file) ? file.at(1) : file.at(0);
+  return QStringLiteral("../../%1/%2/%2.md").arg(ch.toUpper()).arg(file);
+}
 
 class Model : public QAbstractListModel {
   friend class IndexLauncher;
@@ -75,7 +51,6 @@ class Model : public QAbstractListModel {
 
   void SelectFile(const QString& file = {});
   void Select(const QModelIndex& idx);
-  void CopyCurrent();
 
   int rowCount(const QModelIndex& parent) const override;
   QVariant data(const QModelIndex& index, int role) const override;
@@ -111,20 +86,6 @@ void Model::Select(const QModelIndex& idx) {
   list->scrollTo(filter->mapFromSource(currentIndex_));
 }
 
-void Model::CopyCurrent() {
-  QChar ch = file_.front();
-  if ((file_.length() > 1) && (ch == QLatin1Char('Q')) &&
-      (file_.at(1).isUpper())) {
-    ch = file_.at(1);
-  }
-  QString text =
-      QStringLiteral("../../%1/%2/%2.md#%3")
-          .arg(ch.toUpper())
-          .arg(file_)
-          .arg((currentData_->cbegin() + currentIndex_.row()).value().second);
-  QGuiApplication::clipboard()->setText(text);
-}
-
 int Model::rowCount(const QModelIndex&) const {
   return file_.isEmpty() ? titles_.count() : titles_.value(file_).count();
 }
@@ -134,7 +95,7 @@ QVariant Model::data(const QModelIndex& index, int role) const {
     case Qt::DisplayRole:
       if (currentData_) {
         auto it = currentData_->cbegin() + index.row();
-        return QStringLiteral("%1\n%2").arg(it.key()).arg(it.value().first);
+        return QStringLiteral("%1\n%2").arg(it.key(), it.value().first);
       } else {
         return (titles_.cbegin() + index.row()).key();
       }
@@ -177,7 +138,7 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
   list_->setSelectionMode(QAbstractItemView::NoSelection);
   layout->addWidget(list_);
 
-  connect(input_, &QLineEdit::textChanged, [this](const QString& text) {
+  connect(input_, &QLineEdit::textChanged, input_, [this](const QString& text) {
     filter_->setFilterFixedString(text);
     model_->Select(filter_->mapToSource(filter_->index(0, 0)));
   });
@@ -218,16 +179,37 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
         line.remove(0, 1);
       }
       line = line.trimmed();
-      QString raw = line;
+      // QString raw = line;
 
       // Remove syntax and strings * = " \ ' /
+      // [\*\=\"\\\'\/]
+      static const auto kSyntaxRegexp = [] {
+        auto regexp =
+            QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
+        regexp.optimize();
+        return regexp;
+      }();
       line.replace(kSyntaxRegexp, QString{});
 
       // Replace markdown link [xxx](yyy) to xxx
+      // \[(\S+)\]\(\S+\)
+      static const auto kLinkRegexp = [] {
+        auto regexp =
+            QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
+        regexp.optimize();
+        return regexp;
+      }();
       line.replace(kLinkRegexp, QStringLiteral("\\1"));
       QString unref = line;
 
       // Find function name
+      //[\w_]+::([\w_]+)\(
+      static const auto kMethodRegexp = [] {
+        auto regexp =
+            QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
+        regexp.optimize();
+        return regexp;
+      }();
       QStringList titles;
       QRegularExpressionMatch match = kMethodRegexp.match(line);
       if (match.hasMatch()) {
@@ -235,6 +217,12 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
       }
 
       // No function name, find other symbols
+      // [\w_]+::([\w_]+)
+      static const auto kMemberRegexp = [] {
+        QRegularExpression regexp{QStringLiteral("[\\w_]+::([\\w_]+)")};
+        regexp.optimize();
+        return regexp;
+      }();
       if (titles.isEmpty()) {
         QRegularExpressionMatchIterator it = kMemberRegexp.globalMatch(line);
         while (it.hasNext()) {
@@ -243,6 +231,13 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
       }
 
       // Generate html link _ , . : ( ) [ ] { }
+      // [\_\,\.\:\(\)\[\]\{\}]
+      static const auto kPunctuationRegexp = [] {
+        QRegularExpression regexp{
+            QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
+        regexp.optimize();
+        return regexp;
+      }();
       line.replace(kPunctuationRegexp, QString{});
       line.replace(QLatin1Char('\t'), QLatin1Char('-'));
       if (titles.isEmpty()) {
@@ -299,14 +294,24 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   return count.load();
 }
 
-void IndexLauncher::raise() {
+void IndexLauncher::Trigger() {
   if (isVisible()) {
+    if (model_->file_.isEmpty()) {
+      QString filePath = model_->currentIndex_.data().toString();
+      QGuiApplication::clipboard()->setText(
+          FilePath(filePath.isEmpty() ? input_->text() : filePath));
+    }
     hide();
     return;
   }
 
   model_->SelectFile();
-  input_->clear();
+  QString clipBoardText = QGuiApplication::clipboard()->text();
+  if (IsValidFile(clipBoardText)) {
+    input_->setText(clipBoardText);
+  } else {
+    input_->clear();
+  }
   input_->setPlaceholderText(tr("Please enter file name or class name"));
   emit input_->textChanged({});
 
@@ -322,8 +327,8 @@ void IndexLauncher::raise() {
     QRect geom = geometry();
     geom.moveCenter(sGeom.center());
     setGeometry(geom);
+    window->setOpacity(kOpacity);
   }
-  window->setOpacity(kOpacity);
 }
 
 bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
@@ -368,7 +373,13 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
           input_->setPlaceholderText(tr("Please enter title"));
           input_->clear();
         } else {
-          model_->CopyCurrent();
+          QString filePath = FilePath(model_->file_);
+          QString title =
+              (model_->currentData_->cbegin() + model_->currentIndex_.row())
+                  .value()
+                  .second;
+          QGuiApplication::clipboard()->setText(
+              QStringLiteral("%1.md#%2").arg(filePath, title));
           hide();
         }
       } break;
