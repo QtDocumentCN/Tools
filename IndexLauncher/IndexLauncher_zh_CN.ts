@@ -9,7 +9,7 @@
         <translation>请输入文件名/类名</translation>
     </message>
     <message>
-        <location filename="indexlauncher.cpp" line="373"/>
+        <location filename="indexlauncher.cpp" line="380"/>
         <source>Please enter title</source>
         <translation>请输入标题</translation>
     </message>
@@ -63,7 +63,8 @@
     </message>
     <message>
         <location filename="main.cpp" line="234"/>
-        <source>&lt;h1&gt;Markdown Index Launcher&lt;/h1&gt;&lt;p&gt;This tool can index markdown files, and help you to search titles, retrieve it&apos;s html link into clipboard.&lt;/p&gt;&lt;p&gt;&lt;h2&gt;Index path&lt;/h2&gt;  &lt;ul&gt;  &lt;li&gt;File link generation:&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;/li&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press %1 again, the html link will be generated into clipboard.&lt;li/&gt;    &lt;/ol&gt;  &lt;li&gt;Title link generation&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;li/&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press Enter, then the list will show titles under the class/file.&lt;li/&gt;    &lt;li&gt;Select correspond title in same way.&lt;li/&gt;    &lt;li&gt;Press Enter, the html link will be generated into clipboard.&lt;/li&gt;  &lt;/ul&gt;&lt;h2&gt;Set hotkey:&lt;/h2&gt;  &lt;ul&gt;&lt;li&gt;Set hotkey for index launcher, current is %1.&lt;li/&gt;&lt;/p&gt;&lt;p&gt;Copyleft &lt;a href=%2&gt;QtDocumentCN&lt;/a&gt; with &lt;a href=%3&gt;3-Clause BSD License&lt;/a&gt;.&lt;/p&gt;</source>
+        <source>&lt;h1&gt;Markdown Index Launcher&lt;/h1&gt;&lt;p&gt;This tool can index markdown files, and help you to search titles, retrieve it&apos;s link into clipboard.&lt;/p&gt;&lt;p&gt;&lt;h2&gt;Index path&lt;/h2&gt;  &lt;ul&gt;  &lt;li&gt;File link generation:&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;/li&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press %1 or Ctrl+Enter, the link will be generated into clipboard.&lt;li/&gt;    &lt;/ol&gt;  &lt;li&gt;Title link generation&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;li/&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press Enter, then the list will show titles under the class/file.&lt;li/&gt;    &lt;li&gt;Select correspond title in same way.&lt;li/&gt;    &lt;ul&gt;      &lt;li&gt;Press Enter, file#title link will be generated into clipboard.&lt;/li&gt;      &lt;li&gt;Press Ctrl+Enter, #title link will be generated into clipboard.&lt;/li&gt;    &lt;/ul&gt;  &lt;/ul&gt;&lt;h2&gt;Set hotkey:&lt;/h2&gt;  &lt;ul&gt;&lt;li&gt;Set hotkey for index launcher, current is %1.&lt;li/&gt;&lt;/p&gt;&lt;p&gt;Copyleft &lt;a href=%2&gt;QtDocumentCN&lt;/a&gt; with &lt;a href=%3&gt;3-Clause BSD License&lt;/a&gt;.&lt;/p&gt;</source>
+        <oldsource>&lt;h1&gt;Markdown Index Launcher&lt;/h1&gt;&lt;p&gt;This tool can index markdown files, and help you to search titles, retrieve it&apos;s link into clipboard.&lt;/p&gt;&lt;p&gt;&lt;h2&gt;Index path&lt;/h2&gt;  &lt;ul&gt;  &lt;li&gt;File link generation:&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;/li&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press %1 or Ctrl+Enter, the link will be generated into clipboard.&lt;li/&gt;    &lt;/ol&gt;  &lt;li&gt;Title link generation&lt;/li&gt;    &lt;ol&gt;    &lt;li&gt;Press %1, open the index launcher, class/file name in clipboard will be auto filled.&lt;li/&gt;    &lt;li&gt;Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.&lt;/li&gt;    &lt;li&gt;Press Enter, then the list will show titles under the class/file.&lt;li/&gt;    &lt;li&gt;Select correspond title in same way.&lt;li/&gt;    &lt;ul&gt;      &lt;li&gt;Press Enter, head#title link will be generated into clipboard.&lt;/li&gt;      &lt;li&gt;Press Ctrl+Enter, #title link will be generated into clipboard.&lt;/li&gt;    &lt;/ul&gt;  &lt;/ul&gt;&lt;h2&gt;Set hotkey:&lt;/h2&gt;  &lt;ul&gt;&lt;li&gt;Set hotkey for index launcher, current is %1.&lt;li/&gt;&lt;/p&gt;&lt;p&gt;Copyleft &lt;a href=%2&gt;QtDocumentCN&lt;/a&gt; with &lt;a href=%3&gt;3-Clause BSD License&lt;/a&gt;.&lt;/p&gt;</oldsource>
         <translation>&lt;h1&gt;Markdown 索引工具&lt;/h1&gt;
 &lt;p&gt;本工具用于索引 Markdown 文件，提供检索标题并生成链接至剪贴板的功能。&lt;/p&gt;
 &lt;p&gt;
@@ -73,7 +74,7 @@
     &lt;ol&gt;
     &lt;li&gt;将类名/文件名复制到剪贴板；&lt;/li&gt;
     &lt;li&gt;按下 %1，打开索引工具&lt;/li&gt;
-    &lt;li&gt;再次按下 %1，html链接会被生成至剪贴板。&lt;li/&gt;
+    &lt;li&gt;按下 %1 或 Ctrl+Enter，html链接会被生成至剪贴板。&lt;li/&gt;
     &lt;/ol&gt;
   &lt;li&gt;生成标题链接：&lt;/li&gt;
     &lt;ol&gt;
@@ -81,7 +82,10 @@
     &lt;li&gt;输入类名/文件名，通过上下/翻译按键选取对应条目；&lt;/li&gt;
     &lt;li&gt;按下回车，索引列表会显示该类/文件中的标题列表；&lt;li/&gt;
     &lt;li&gt;用相同方式选取对应标题；&lt;li/&gt;
-    &lt;li&gt;按下回车，标题链接会被生成至剪贴板。&lt;/li&gt;
+    &lt;ul&gt;
+      &lt;li&gt;按下回车，file#title 格式的链接会被生成至剪贴板。&lt;/li&gt;
+      &lt;li&gt;按下 Ctrl+Enter，#title 格式的链接会被生成至剪贴板。&lt;/li&gt;
+    &lt;/ul&gt;
   &lt;/ul&gt;
 &lt;h2&gt;设置快捷键&lt;/h2&gt;
   &lt;ul&gt;&lt;li&gt;设置索引工具的快捷键，当前快捷键为 %1。&lt;li/&gt;
@@ -89,12 +93,12 @@
 &lt;p&gt;版权所有 &lt;a href=&quot;%2&quot;&gt;QtDocumentCN&lt;/a&gt;，采用 &lt;a href=&quot;%3&quot;&gt;BSD-3-Clause&lt;/a&gt; 协议。&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="263"/>
+        <location filename="main.cpp" line="266"/>
         <source>Ho&amp;mepage</source>
         <translation>主页(&amp;M)</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="268"/>
+        <location filename="main.cpp" line="271"/>
         <source>&amp;Quit</source>
         <translation>退出(&amp;Q)</translation>
     </message>

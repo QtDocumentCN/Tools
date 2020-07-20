@@ -335,7 +335,8 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
   static constexpr int kPageIndexes = 5;
 
   if (event->type() == QEvent::KeyRelease) {
-    switch (dynamic_cast<QKeyEvent*>(event)->key()) {
+    auto e = dynamic_cast<QKeyEvent*>(event);
+    switch (e->key()) {
       case Qt::Key_Escape:
         hide();
         break;
@@ -369,18 +370,34 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
       case Qt::Key_Return:
       case Qt::Key_Enter: {
         if (model_->file_.isEmpty()) {
-          model_->SelectFile(model_->currentIndex_.data().toString());
-          input_->setPlaceholderText(tr("Please enter title"));
-          input_->clear();
+          QString file = model_->currentIndex_.data().toString();
+          if (e->modifiers() & Qt::ControlModifier) {
+            QGuiApplication::clipboard()->setText(
+                FilePath(file.isEmpty() ? input_->text() : file));
+            hide();
+          } else {
+            model_->SelectFile(file);
+            input_->setPlaceholderText(tr("Please enter title"));
+            input_->clear();
+          }
         } else {
-          QString filePath = FilePath(model_->file_);
-          QString title =
-              (model_->currentData_->cbegin() + model_->currentIndex_.row())
-                  .value()
-                  .second;
+          if (e->modifiers() & Qt::ControlModifier) {
+            QString title =
+                (model_->currentData_->cbegin() + model_->currentIndex_.row())
+                    .value()
+                    .second;
+            QGuiApplication::clipboard()->setText(QStringLiteral("#") + title);
+            hide();
+          } else {
+            QString filePath = FilePath(model_->file_);
+            QString title =
+                (model_->currentData_->cbegin() + model_->currentIndex_.row())
+                    .value()
+                    .second;
             QGuiApplication::clipboard()->setText(
                 QStringLiteral("%1#%2").arg(filePath, title));
             hide();
+          }
         }
       } break;
 

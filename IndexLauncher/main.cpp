@@ -232,7 +232,7 @@ int main(int argc, char* argv[]) {
         box.setWindowTitle(IndexLauncher::tr("Help"));
         box.setTextFormat(Qt::RichText);
         box.setText(IndexLauncher::tr("<h1>Markdown Index Launcher</h1>\
-<p>This tool can index markdown files, and help you to search titles, retrieve it's html link into clipboard.</p>\
+<p>This tool can index markdown files, and help you to search titles, retrieve it's link into clipboard.</p>\
 <p>\
 <h2>Index path</h2>\
   <ul>\
@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
     <ol>\
     <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.</li>\
     <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
-    <li>Press %1 again, the html link will be generated into clipboard.<li/>\
+    <li>Press %1 or Ctrl+Enter, the link will be generated into clipboard.<li/>\
     </ol>\
   <li>Title link generation</li>\
     <ol>\
@@ -248,7 +248,10 @@ int main(int argc, char* argv[]) {
     <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
     <li>Press Enter, then the list will show titles under the class/file.<li/>\
     <li>Select correspond title in same way.<li/>\
-    <li>Press Enter, the html link will be generated into clipboard.</li>\
+    <ul>\
+      <li>Press Enter, file#title link will be generated into clipboard.</li>\
+      <li>Press Ctrl+Enter, #title link will be generated into clipboard.</li>\
+    </ul>\
   </ul>\
 <h2>Set hotkey:</h2>\
   <ul><li>Set hotkey for index launcher, current is %1.<li/>\
