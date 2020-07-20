@@ -17,7 +17,7 @@
         <location filename="main.cpp" line="63"/>
         <source># Markdown Index Launcher
 </source>
-        <translation>Markdown 索引工具
+        <translation># Markdown 索引工具
 </translation>
     </message>
     <message>
