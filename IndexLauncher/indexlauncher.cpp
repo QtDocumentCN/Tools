@@ -51,6 +51,7 @@ class Model : public QAbstractListModel {
 
   void SelectFile(const QString& file = {});
   void Select(const QModelIndex& idx);
+  QString CurrentTitle() const;
 
   int rowCount(const QModelIndex& parent) const override;
   QVariant data(const QModelIndex& index, int role) const override;
@@ -84,6 +85,17 @@ void Model::Select(const QModelIndex& idx) {
   auto list = qobject_cast<QListView*>(parent());
   auto filter = qobject_cast<QSortFilterProxyModel*>(list->model());
   list->scrollTo(filter->mapFromSource(currentIndex_));
+}
+
+QString Model::CurrentTitle() const {
+  if (!currentData_) {
+    return {};
+  }
+  if ((currentIndex_.row() < 0) ||
+      (currentIndex_.row() >= currentData_->count())) {
+    return {};
+  }
+  return (currentData_->cbegin() + currentIndex_.row()).value().second;
 }
 
 int Model::rowCount(const QModelIndex&) const {
@@ -301,11 +313,8 @@ void IndexLauncher::Trigger() {
       QGuiApplication::clipboard()->setText(
           FilePath(filePath.isEmpty() ? input_->text() : filePath));
     } else {
-      QString title =
-          (model_->currentData_->cbegin() + model_->currentIndex_.row())
-              .value()
-              .second;
-      QGuiApplication::clipboard()->setText(QStringLiteral("#") + title);
+      QGuiApplication::clipboard()->setText(QStringLiteral("#") +
+                                            model_->CurrentTitle());
       hide();
     }
     hide();
@@ -381,12 +390,8 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
           input_->setPlaceholderText(tr("Please enter title"));
           input_->clear();
         } else {
-          QString title =
-              (model_->currentData_->cbegin() + model_->currentIndex_.row())
-                  .value()
-                  .second;
-          QGuiApplication::clipboard()->setText(
-              QStringLiteral("%1#%2").arg(FilePath(model_->file_), title));
+          QGuiApplication::clipboard()->setText(QStringLiteral("%1#%2").arg(
+              FilePath(model_->file_), model_->CurrentTitle()));
           hide();
         }
       } break;
