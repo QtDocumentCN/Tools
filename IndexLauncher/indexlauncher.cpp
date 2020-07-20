@@ -320,7 +320,7 @@ void IndexLauncher::Trigger() {
     input_->clear();
   }
   input_->setPlaceholderText(tr("Please enter file name or class name"));
-  emit input_->textChanged({});
+  emit input_->textChanged(input_->text());
 
   show();
   QWidget::raise();
