@@ -52,8 +52,7 @@ int main(int argc, char* argv[]) {
     QCoreApplication::installTranslator(&translator_zh_CN);
   }
 
-  QCoreApplication::setApplicationName(
-      IndexLauncher::tr("Markdown Index Launcher"));
+  QCoreApplication::setApplicationName(QStringLiteral("IndexLauncher"));
   QCoreApplication::setOrganizationName(QStringLiteral("QtDocumentCN"));
   QGuiApplication::setQuitOnLastWindowClosed(false);
   QApplication::setWindowIcon(QIcon(QStringLiteral(":/icon/tools.ico")));
@@ -129,12 +128,12 @@ int main(int argc, char* argv[]) {
     bool hotkeyRegistered = hotkey.isRegistered();
     if (hotkeyRegistered) {
       tray.showMessage(
-          QCoreApplication::applicationName(),
+          IndexLauncher::tr("Markdown Index Launcher"),
           IndexLauncher::tr("Hotkey %1 is already used!").arg(keys),
           QSystemTrayIcon::Warning);
     } else {
       shortcut = keys;
-      tray.showMessage(QCoreApplication::applicationName(),
+      tray.showMessage(IndexLauncher::tr("Markdown Index Launcher"),
                        IndexLauncher::tr("Hotkey is set to %1").arg(keys),
                        QSystemTrayIcon::Information, kInformationTime);
     }
@@ -174,7 +173,7 @@ int main(int argc, char* argv[]) {
           timer.start();
           size_t count = launcher.IndexFiles(files);
           tray.showMessage(
-              QCoreApplication::applicationName(),
+              IndexLauncher::tr("Markdown Index Launcher"),
               IndexLauncher::tr(
                   "Index finised for %1 files with %2 titles in %3 ms")
                   .arg(files.count())
