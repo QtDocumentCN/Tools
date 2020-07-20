@@ -65,27 +65,29 @@ void ShowHelp(const QString& shortcut) {
     title_layout->addWidget(title);
   }
 
-  auto text = new QLabel(IndexLauncher::tr("\
+  auto text = new QLabel(&dialog);
+  text->setTextFormat(Qt::MarkdownText);
+  text->setTextInteractionFlags(Qt::TextBrowserInteraction);
+  text->setText(IndexLauncher::tr("\
 This tool can index markdown files, and help you to search titles, retrieve it's link into clipboard.\n\
 \n----\n\
 \n## Index path\n\
 - File link generation:\n\
-    1. Press %1 to open the index launcher, class/file name in clipboard will be auto filled.\n\
+    1. Press `%1` to open the index launcher, class/file name in clipboard will be auto filled.\n\
     2. Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.\n\
-    3. Press %1, the link will be generated into clipboard.\n\
+    3. Press `%1`, the link will be generated into clipboard.\n\
 - Title link generation\n\
-    1. Press %1 to open the index launcher, class/file name in clipboard will be auto filled.\n\
+    1. Press `%1` to open the index launcher, class/file name in clipboard will be auto filled.\n\
     2. Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.\n\
-    3. Press Enter, then the list will show titles under the class/file.\n\
+    3. Press `Enter`, then the list will show titles under the class/file.\n\
     4. Select correspond title in same way.\n\
-        - Press Enter, file#title link will be generated into clipboard.\n\
-        - Press %1, #title link will be generated into clipboard.\n\
+        - Press `Enter`, `file#title` link will be generated into clipboard.\n\
+        - Press `%1`, `#title` link will be generated into clipboard.\n\
 \n## Set hotkey\n\
-Set hotkey for index launcher, current is %1.\n\
+Set hotkey for index launcher, current is `%1`.\n\
 \n----\n\
 \nCopyleft [QtDocumentCN](%2) with [3-Clause BSD License](%3).")
-                             .arg(shortcut, kOrganizationUrl, kBsdUrl));
-  text->setTextFormat(Qt::MarkdownText);
+                    .arg(shortcut, kOrganizationUrl, kBsdUrl));
   layout->addWidget(text);
 
   {
