@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
     <ol>\
     <li>Press %1, open the index launcher, class/file name in clipboard will be auto filled.</li>\
     <li>Enter class/file name, select correspond item with Up/Down or PageUp/PageDown keys.</li>\
-    <li>Press %1 or Ctrl+Enter, the link will be generated into clipboard.<li/>\
+    <li>Press %1, the link will be generated into clipboard.<li/>\
     </ol>\
   <li>Title link generation</li>\
     <ol>\
@@ -250,7 +250,7 @@ int main(int argc, char* argv[]) {
     <li>Select correspond title in same way.<li/>\
     <ul>\
       <li>Press Enter, file#title link will be generated into clipboard.</li>\
-      <li>Press Ctrl+Enter, #title link will be generated into clipboard.</li>\
+      <li>Press %1, #title link will be generated into clipboard.</li>\
     </ul>\
   </ul>\
 <h2>Set hotkey:</h2>\

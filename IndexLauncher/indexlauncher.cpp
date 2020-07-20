@@ -300,6 +300,13 @@ void IndexLauncher::Trigger() {
       QString filePath = model_->currentIndex_.data().toString();
       QGuiApplication::clipboard()->setText(
           FilePath(filePath.isEmpty() ? input_->text() : filePath));
+    } else {
+      QString title =
+          (model_->currentData_->cbegin() + model_->currentIndex_.row())
+              .value()
+              .second;
+      QGuiApplication::clipboard()->setText(QStringLiteral("#") + title);
+      hide();
     }
     hide();
     return;
@@ -370,34 +377,17 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
       case Qt::Key_Return:
       case Qt::Key_Enter: {
         if (model_->file_.isEmpty()) {
-          QString file = model_->currentIndex_.data().toString();
-          if (e->modifiers() & Qt::ControlModifier) {
-            QGuiApplication::clipboard()->setText(
-                FilePath(file.isEmpty() ? input_->text() : file));
-            hide();
-          } else {
-            model_->SelectFile(file);
-            input_->setPlaceholderText(tr("Please enter title"));
-            input_->clear();
-          }
+          model_->SelectFile(model_->currentIndex_.data().toString());
+          input_->setPlaceholderText(tr("Please enter title"));
+          input_->clear();
         } else {
-          if (e->modifiers() & Qt::ControlModifier) {
-            QString title =
-                (model_->currentData_->cbegin() + model_->currentIndex_.row())
-                    .value()
-                    .second;
-            QGuiApplication::clipboard()->setText(QStringLiteral("#") + title);
-            hide();
-          } else {
-            QString filePath = FilePath(model_->file_);
-            QString title =
-                (model_->currentData_->cbegin() + model_->currentIndex_.row())
-                    .value()
-                    .second;
-            QGuiApplication::clipboard()->setText(
-                QStringLiteral("%1#%2").arg(filePath, title));
-            hide();
-          }
+          QString title =
+              (model_->currentData_->cbegin() + model_->currentIndex_.row())
+                  .value()
+                  .second;
+          QGuiApplication::clipboard()->setText(
+              QStringLiteral("%1#%2").arg(FilePath(model_->file_), title));
+          hide();
         }
       } break;
 
