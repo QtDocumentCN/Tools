@@ -378,9 +378,9 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
               (model_->currentData_->cbegin() + model_->currentIndex_.row())
                   .value()
                   .second;
-          QGuiApplication::clipboard()->setText(
-              QStringLiteral("%1.md#%2").arg(filePath, title));
-          hide();
+            QGuiApplication::clipboard()->setText(
+                QStringLiteral("%1#%2").arg(filePath, title));
+            hide();
         }
       } break;
 
