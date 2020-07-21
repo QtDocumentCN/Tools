@@ -101,7 +101,7 @@ Set hotkey for index launcher, current is `%1`.\n\
 
     auto ok = new QPushButton(IndexLauncher::tr("&Ok"), &dialog);
     button_layout->addWidget(ok);
-    ok->setFocus();
+    ok->setDefault(true);
     QObject::connect(ok, &QPushButton::clicked, &dialog, &QDialog::accept);
   }
 
