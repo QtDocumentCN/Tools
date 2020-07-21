@@ -22,6 +22,7 @@ class IndexLauncher : public QFrame {
   bool eventFilter(QObject* object, QEvent* event) override;
 
  private:
+  friend class Model;
   QLineEdit* input_;
   QListView* list_;
   Model* model_;

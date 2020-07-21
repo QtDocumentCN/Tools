@@ -39,6 +39,9 @@ inline bool IsValidFile(const QString& file) {
 }
 
 QString FilePath(QString file) {
+  if (file.isEmpty()) {
+    return {};
+  }
   if (file.endsWith(QStringLiteral(".md"))) {
     file = file.left(file.length() - 3);
   }
@@ -48,9 +51,12 @@ QString FilePath(QString file) {
 
 class Model : public QAbstractListModel {
  public:
-  explicit Model(QObject* parent = nullptr);
+  explicit Model(IndexLauncher* parent = nullptr);
 
-  void SelectFile(const QString& file = {});
+  void UpdateIndexes(
+      const QFileInfoList& files,
+      const QVector<QMultiMap<QString, QPair<QString, QString>>>& titles);
+  bool SelectFile(const QString& file = {});
   void Select(const QModelIndex& idx);
   QString CurrentTitle() const;
 
@@ -61,11 +67,13 @@ class Model : public QAbstractListModel {
   friend class IndexLauncher;
   friend class HtmlDelegate;
 
+  IndexLauncher* q_;
+
   QString file_;
 
   // <File, <Title, (Text, Link)>>
   QMap<QString, QMultiMap<QString, QPair<QString, QString>>> titles_;
-  QMultiMap<QString, QPair<QString, QString>>* currentData_ = nullptr;
+  const QMultiMap<QString, QPair<QString, QString>>* currentData_ = nullptr;
   QModelIndex currentIndex_;
 };
 
@@ -82,14 +90,36 @@ class HtmlDelegate : public QStyledItemDelegate {
   Model* model_ = nullptr;
 };
 
-Model::Model(QObject* parent) : QAbstractListModel(parent) {}
+Model::Model(IndexLauncher* parent) : QAbstractListModel(parent), q_(parent) {}
 
-void Model::SelectFile(const QString& file) {
-  if (file != file_) {
-    beginResetModel();
-    file_ = file;
-    currentData_ = file_.isEmpty() ? nullptr : &titles_[file_];
+void Model::UpdateIndexes(
+    const QFileInfoList& files,
+    const QVector<QMultiMap<QString, QPair<QString, QString>>>& titles) {
+  QSignalBlocker blocker(q_->input_);
+  beginResetModel();
+  for (int i = 0; i < files.count(); ++i) {
+    titles_[files.at(i).completeBaseName()] = titles.at(i);
+  }
+  file_.clear();
+  currentData_ = nullptr;
+  q_->input_->clear();
+  endResetModel();
+}
+
+bool Model::SelectFile(const QString& file) {
+  q_->input_->setText(file);
+  beginResetModel();
+  auto it = titles_.find(file);
+  if (it == titles_.cend()) {
+    file_.clear();
+    currentData_ = nullptr;
     endResetModel();
+    return false;
+  } else {
+    file_ = file;
+    currentData_ = &*it;
+    endResetModel();
+    return true;
   }
 }
 
@@ -99,13 +129,12 @@ void Model::Select(const QModelIndex& idx) {
   emit dataChanged(prev, prev);
   emit dataChanged(currentIndex_, currentIndex_);
 
-  auto list = qobject_cast<QListView*>(parent());
-  auto filter = qobject_cast<QSortFilterProxyModel*>(list->model());
-  list->scrollTo(filter->mapFromSource(currentIndex_));
+  auto filter = qobject_cast<QSortFilterProxyModel*>(q_->list_->model());
+  q_->list_->scrollTo(filter->mapFromSource(currentIndex_));
 }
 
 QString Model::CurrentTitle() const {
-  if (!currentData_) {
+  if (file_.isEmpty()) {
     return {};
   }
   if ((currentIndex_.row() < 0) ||
@@ -122,11 +151,11 @@ int Model::rowCount(const QModelIndex&) const {
 QVariant Model::data(const QModelIndex& index, int role) const {
   switch (role) {
     case Qt::DisplayRole:
-      if (currentData_) {
+      if (file_.isEmpty()) {
+        return (titles_.cbegin() + index.row()).key();
+      } else {
         auto it = currentData_->cbegin() + index.row();
         return QStringLiteral("**%1**\n%2").arg(it.key(), it.value().first);
-      } else {
-        return (titles_.cbegin() + index.row()).key();
       }
 
     case Qt::BackgroundRole:
@@ -191,7 +220,7 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
     : QFrame(parent, flags),
       input_(new QLineEdit(this)),
       list_(new QListView(this)),
-      model_(new Model(list_)),
+      model_(new Model(this)),
       filter_(new QSortFilterProxyModel(list_)) {
   auto layout = new QVBoxLayout(this);
 
@@ -222,10 +251,106 @@ IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
   });
 }
 
+void IndexFile(const QFileInfo& fileInfo,
+               QMultiMap<QString, QPair<QString, QString>>* titleMap,
+               std::atomic<size_t>* count) {
+  QFile file{fileInfo.absoluteFilePath()};
+  if (!file.open(QFile::ReadOnly | QFile::Text)) {
+    return;
+  }
+
+  while (!file.atEnd()) {
+    QString line = file.readLine();
+    if (!line.startsWith(QLatin1Char('#'))) {
+      continue;
+    }
+
+    // Trim
+    while (line.startsWith(QLatin1Char('#'))) {
+      line.remove(0, 1);
+    }
+    line = line.trimmed();
+    // QString raw = line;
+
+    // Remove syntax and strings * = " \ ' /
+    // [\*\=\"\\\'\/]
+    static const auto kSyntaxRegexp = [] {
+      auto regexp =
+          QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
+      regexp.optimize();
+      return regexp;
+    }();
+    line.replace(kSyntaxRegexp, QString{});
+
+    // Replace markdown link [xxx](yyy) to xxx
+    // \[(\S+)\]\(\S+\)
+    static const auto kLinkRegexp = [] {
+      auto regexp =
+          QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
+      regexp.optimize();
+      return regexp;
+    }();
+    line.replace(kLinkRegexp, QStringLiteral("\\1"));
+    QString unref = line;
+
+    // Find function name
+    //[\w_]+::([\w_]+)\(
+    static const auto kMethodRegexp = [] {
+      auto regexp = QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
+      regexp.optimize();
+      return regexp;
+    }();
+    QStringList titles;
+    QRegularExpressionMatch match = kMethodRegexp.match(line);
+    if (match.hasMatch()) {
+      titles << match.captured(1);
+    }
+
+    // No function name, find other symbols
+    // [\w_]+::([\w_]+)
+    static const auto kMemberRegexp = [] {
+      QRegularExpression regexp{QStringLiteral("[\\w_]+::([\\w_]+)")};
+      regexp.optimize();
+      return regexp;
+    }();
+    if (titles.isEmpty()) {
+      QRegularExpressionMatchIterator it = kMemberRegexp.globalMatch(line);
+      while (it.hasNext()) {
+        titles << it.next().captured(1);
+      };
+    }
+
+    // Generate html link _ , . : ( ) [ ] { }
+    // [\_\,\.\:\(\)\[\]\{\}]
+    static const auto kPunctuationRegexp = [] {
+      QRegularExpression regexp{
+          QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
+      regexp.optimize();
+      return regexp;
+    }();
+    line.replace(kPunctuationRegexp, QString{});
+    line.replace(QLatin1Char('\t'), QLatin1Char('-'));
+    if (titles.isEmpty()) {
+      titles = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    }
+    line.replace(QLatin1Char(' '), QLatin1Char('-'));
+    line = line.toLower();
+
+    // qDebug().noquote() << "File: " << fileInfo.completeBaseName()
+    //                    << "\n Raw:\t" << raw
+    //                    << "\n Unref:\t" << unref
+    //                    << "\n Titles:\t" << titles
+    //                    << "\n link:\t" << line;
+
+    for (auto&& title : titles) {
+      titleMap->insert(title, {unref, line});
+    }
+    count->fetch_add(titles.count());
+  }
+}
+
 size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   hide();
-  model_->beginResetModel();
-  model_->titles_.clear();
 
   std::vector<std::future<void>> futures;
   std::atomic<size_t> count = ATOMIC_VAR_INIT(0);
@@ -237,115 +362,14 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
                           Qt::WindowStaysOnTopHint);
   progress.show();
 
-  std::function<void(const QFileInfo&,
-                     QMultiMap<QString, QPair<QString, QString>>*)>
-      IndexFile;
-  IndexFile = [&count](const QFileInfo& fileInfo,
-                       QMultiMap<QString, QPair<QString, QString>>* titleMap) {
-    QFile file{fileInfo.absoluteFilePath()};
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-      return;
-    }
-
-    while (!file.atEnd()) {
-      QString line = file.readLine();
-      if (!line.startsWith(QLatin1Char('#'))) {
-        continue;
-      }
-
-      // Trim
-      while (line.startsWith(QLatin1Char('#'))) {
-        line.remove(0, 1);
-      }
-      line = line.trimmed();
-      // QString raw = line;
-
-      // Remove syntax and strings * = " \ ' /
-      // [\*\=\"\\\'\/]
-      static const auto kSyntaxRegexp = [] {
-        auto regexp =
-            QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
-        regexp.optimize();
-        return regexp;
-      }();
-      line.replace(kSyntaxRegexp, QString{});
-
-      // Replace markdown link [xxx](yyy) to xxx
-      // \[(\S+)\]\(\S+\)
-      static const auto kLinkRegexp = [] {
-        auto regexp =
-            QRegularExpression{QStringLiteral("\\[(\\S+)\\]\\(\\S+\\)")};
-        regexp.optimize();
-        return regexp;
-      }();
-      line.replace(kLinkRegexp, QStringLiteral("\\1"));
-      QString unref = line;
-
-      // Find function name
-      //[\w_]+::([\w_]+)\(
-      static const auto kMethodRegexp = [] {
-        auto regexp =
-            QRegularExpression{QStringLiteral("[\\w_]+::([\\w_]+)\\(")};
-        regexp.optimize();
-        return regexp;
-      }();
-      QStringList titles;
-      QRegularExpressionMatch match = kMethodRegexp.match(line);
-      if (match.hasMatch()) {
-        titles << match.captured(1);
-      }
-
-      // No function name, find other symbols
-      // [\w_]+::([\w_]+)
-      static const auto kMemberRegexp = [] {
-        QRegularExpression regexp{QStringLiteral("[\\w_]+::([\\w_]+)")};
-        regexp.optimize();
-        return regexp;
-      }();
-      if (titles.isEmpty()) {
-        QRegularExpressionMatchIterator it = kMemberRegexp.globalMatch(line);
-        while (it.hasNext()) {
-          titles << it.next().captured(1);
-        };
-      }
-
-      // Generate html link _ , . : ( ) [ ] { }
-      // [\_\,\.\:\(\)\[\]\{\}]
-      static const auto kPunctuationRegexp = [] {
-        QRegularExpression regexp{
-            QStringLiteral("[\\_\\,\\.\\:\\(\\)\\[\\]\\{\\}]")};
-        regexp.optimize();
-        return regexp;
-      }();
-      line.replace(kPunctuationRegexp, QString{});
-      line.replace(QLatin1Char('\t'), QLatin1Char('-'));
-      if (titles.isEmpty()) {
-        titles = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
-      }
-      line.replace(QLatin1Char(' '), QLatin1Char('-'));
-      line = line.toLower();
-
-      // qDebug().noquote() << "File: " << fileInfo.completeBaseName()
-      //                    << "\n Raw:\t" << raw
-      //                    << "\n Unref:\t" << unref
-      //                    << "\n Titles:\t" << titles
-      //                    << "\n link:\t" << line;
-
-      for (auto&& title : titles) {
-        titleMap->insert(title, {unref, line});
-      }
-      count += titles.count();
-    }
-  };
-
   // Add tasks to thread pool
   QVector<QMultiMap<QString, QPair<QString, QString>>> titles;
   titles.resize(files.count());
   futures.reserve(files.count());
   auto now = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < files.count(); ++i) {
-    futures.emplace_back(
-        ThreadPool::default_pool().AddTask(IndexFile, files.at(i), &titles[i]));
+    futures.emplace_back(ThreadPool::default_pool().AddTask(
+        IndexFile, files.at(i), &titles[i], &count));
     if ((std::chrono::high_resolution_clock::now() - now) > kFrameInterval) {
       QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
       now = std::chrono::high_resolution_clock::now();
@@ -361,14 +385,12 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
     } while (status != std::future_status::ready);
     futures[i].get();
 
-    // Add result to model
-    model_->titles_[files.at(i).completeBaseName()] = titles.at(i);
-
     // Update progress
     progress.setValue(progress.value() + 1);
   }
 
-  model_->endResetModel();
+  // Add result to model
+  model_->UpdateIndexes(files, titles);
 
   // Item height for first display is wrong, so trigger & hide to avoid it.
   Trigger();
@@ -392,14 +414,17 @@ void IndexLauncher::Trigger() {
     return;
   }
 
-  model_->SelectFile();
+  model_->SelectFile(QString{});
   QStringList list = QGuiApplication::clipboard()->text().split(
       QStringLiteral("::"), Qt::SkipEmptyParts);
   QString file = list.first();
   if (IsValidFile(file)) {
-    model_->SelectFile(file);
     if (list.count() > 1) {
-      input_->setText(list.at(1));
+      if (model_->SelectFile(file)) {
+        input_->setText(list.at(1));
+      }
+    } else {
+      input_->setText(file);
     }
   } else {
     input_->clear();
