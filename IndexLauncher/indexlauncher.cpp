@@ -185,6 +185,7 @@ QSize HtmlDelegate::sizeHint(const QStyleOptionViewItem& option,
   doc.setTextWidth(options.rect.width());
   return {int(doc.idealWidth()), int(doc.size().height())};
 }
+#include <QDebug>
 
 IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
     : QFrame(parent, flags),
@@ -392,9 +393,14 @@ void IndexLauncher::Trigger() {
   }
 
   model_->SelectFile();
-  QString clipBoardText = QGuiApplication::clipboard()->text();
-  if (IsValidFile(clipBoardText)) {
-    input_->setText(clipBoardText);
+  QStringList list = QGuiApplication::clipboard()->text().split(
+      QStringLiteral("::"), Qt::SkipEmptyParts);
+  QString file = list.first();
+  if (IsValidFile(file)) {
+    model_->SelectFile(file);
+    if (list.count() > 1) {
+      input_->setText(list.at(1));
+    }
   } else {
     input_->clear();
   }
