@@ -1,16 +1,14 @@
 #ifndef QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
 #define QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H
 
-#include <QtCore/QMultiMap>
-#include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QFileInfoList>
 #include <QtWidgets/QFrame>
-#include <QtWidgets/QLineEdit>
-#include <QtWidgets/QListView>
 
-class Model;
+class IndexLauncherPrivate;
 class IndexLauncher : public QFrame {
   Q_OBJECT
+  Q_DECLARE_PRIVATE(IndexLauncher)
+
  public:
   explicit IndexLauncher(QWidget* parent = nullptr, Qt::WindowFlags flags = {});
 
@@ -20,13 +18,6 @@ class IndexLauncher : public QFrame {
 
  protected:
   bool eventFilter(QObject* object, QEvent* event) override;
-
- private:
-  friend class Model;
-  QLineEdit* input_;
-  QListView* list_;
-  Model* model_;
-  QSortFilterProxyModel* filter_;
 };
 
 #endif  // QTDOCUMENTCN_TOOLS_INDEXLAUNCHER_H

@@ -1,4 +1,4 @@
-QT       += core gui widgets
+QT       += core gui widgets widgets-private
 
 lessThan(QT_VERSION, 5.14) {
 message("Qt 5.14 required, current version: $$QT_VERSION")

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <iterator>
 #include <vector>
 
 #include <QtCore/QAbstractTableModel>
@@ -10,9 +11,13 @@
 #include <QtCore/QFile>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QVector>
+#include <QtCore/QMultiHash>
+#include <QtCore/QSortFilterProxyModel>
 #include <QtGui/QAbstractTextDocumentLayout>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QListView>
 #include <QtGui/QPainter>
 #include <QtGui/QScreen>
 #include <QtGui/QTextDocument>
@@ -22,6 +27,7 @@
 #include <QtWidgets/QScrollBar>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/private/qframe_p.h>
 
 #include "threadpool.h"
 
@@ -33,227 +39,68 @@ static constexpr double kOpacity = 0.8;
 
 static constexpr auto kFrameInterval = 10ms;
 
-inline bool IsValidFile(const QString& file) {
+/* ================ IndexLauncherPrivate ================ */
+class IndexLauncherPrivate : public QFramePrivate,
+                             public QAbstractListModel,
+                             public QStyledItemDelegate {
+  Q_DECLARE_PUBLIC(IndexLauncher)
+ public:
+  static bool IsQtClassName(const QString& file);
+  static QString FilePath(QString file);
+  static void IndexFile(const QFileInfo& fileInfo,
+                        QMultiHash<QString, QPair<QString, QString> > *titleMap,
+                        std::atomic<size_t>* count);
+
+  void UpdateIndexes(
+      const QFileInfoList& files,
+      const QVector<QMultiHash<QString, QPair<QString, QString>>>& titles);
+  bool SelectFile(const QString& file = {});
+  void Select(int row);
+  QString CurrentFile() const;
+  QString CurrentTitle() const;
+  QModelIndex CurrentIndex() const;
+
+  // QAbstractListModel
+  // https://stackoverflow.com/questions/1956542/how-to-make-item-view-render-rich-html-text-in-qt
+  int rowCount(const QModelIndex& parent) const override;
+  QVariant data(const QModelIndex& index, int role) const override;
+
+  // QStyledItemDelegate
+  void paint(QPainter* painter, const QStyleOptionViewItem& option,
+             const QModelIndex& index) const override;
+  QSize sizeHint(const QStyleOptionViewItem& option,
+                 const QModelIndex& index) const override;
+
+ private:
+  QLineEdit* input_ = nullptr;
+  QListView* list_ = nullptr;
+  QSortFilterProxyModel* filter_ = nullptr;
+
+  // <File, <Title, (Text, Link)>>
+  QHash<QString, QMultiHash<QString, QPair<QString, QString>>> titles_;
+  QString currentFile_;
+};
+
+bool IndexLauncherPrivate::IsQtClassName(const QString& file) {
   return (file.length() > 1) && (file.at(0) == QLatin1Char('Q')) &&
          (file.at(1).isUpper());
 }
 
-QString FilePath(QString file) {
+QString IndexLauncherPrivate::FilePath(QString file) {
   if (file.isEmpty()) {
     return {};
   }
   if (file.endsWith(QStringLiteral(".md"))) {
     file = file.left(file.length() - 3);
   }
-  QChar ch = IsValidFile(file) ? file.at(1) : file.at(0);
+  QChar ch = IsQtClassName(file) ? file.at(1) : file.at(0);
   return QStringLiteral("../../%1/%2/%2.md").arg(ch.toUpper()).arg(file);
 }
 
-class Model : public QAbstractListModel {
- public:
-  explicit Model(IndexLauncher* parent = nullptr);
-
-  void UpdateIndexes(
-      const QFileInfoList& files,
-      const QVector<QMultiMap<QString, QPair<QString, QString>>>& titles);
-  bool SelectFile(const QString& file = {});
-  void Select(const QModelIndex& idx);
-  QString CurrentTitle() const;
-
-  int rowCount(const QModelIndex& parent) const override;
-  QVariant data(const QModelIndex& index, int role) const override;
-
- private:
-  friend class IndexLauncher;
-  friend class HtmlDelegate;
-
-  IndexLauncher* q_;
-
-  QString file_;
-
-  // <File, <Title, (Text, Link)>>
-  QMap<QString, QMultiMap<QString, QPair<QString, QString>>> titles_;
-  const QMultiMap<QString, QPair<QString, QString>>* currentData_ = nullptr;
-  QModelIndex currentIndex_;
-};
-
-// https://stackoverflow.com/questions/1956542/how-to-make-item-view-render-rich-html-text-in-qt
-class HtmlDelegate : public QStyledItemDelegate {
- protected:
-  void paint(QPainter* painter, const QStyleOptionViewItem& option,
-             const QModelIndex& index) const override;
-  QSize sizeHint(const QStyleOptionViewItem& option,
-                 const QModelIndex& index) const override;
- private:
-  friend class IndexLauncher;
-  friend class Model;
-  Model* model_ = nullptr;
-};
-
-Model::Model(IndexLauncher* parent) : QAbstractListModel(parent), q_(parent) {}
-
-void Model::UpdateIndexes(
-    const QFileInfoList& files,
-    const QVector<QMultiMap<QString, QPair<QString, QString>>>& titles) {
-  QSignalBlocker blocker(q_->input_);
-  beginResetModel();
-  for (int i = 0; i < files.count(); ++i) {
-    titles_[files.at(i).completeBaseName()] = titles.at(i);
-  }
-  file_.clear();
-  currentData_ = nullptr;
-  q_->input_->clear();
-  endResetModel();
-}
-
-bool Model::SelectFile(const QString& file) {
-  q_->input_->setText(file);
-  beginResetModel();
-  auto it = titles_.find(file);
-  if (it == titles_.cend()) {
-    file_.clear();
-    currentData_ = nullptr;
-    endResetModel();
-    return false;
-  } else {
-    file_ = file;
-    currentData_ = &*it;
-    endResetModel();
-    return true;
-  }
-}
-
-void Model::Select(const QModelIndex& idx) {
-  auto prev = index(currentIndex_.row(), currentIndex_.column());
-  currentIndex_ = index(idx.row(), idx.column());
-  emit dataChanged(prev, prev);
-  emit dataChanged(currentIndex_, currentIndex_);
-
-  auto filter = qobject_cast<QSortFilterProxyModel*>(q_->list_->model());
-  q_->list_->scrollTo(filter->mapFromSource(currentIndex_));
-}
-
-QString Model::CurrentTitle() const {
-  if (file_.isEmpty()) {
-    return {};
-  }
-  if ((currentIndex_.row() < 0) ||
-      (currentIndex_.row() >= currentData_->count())) {
-    return {};
-  }
-  return (currentData_->cbegin() + currentIndex_.row()).value().second;
-}
-
-int Model::rowCount(const QModelIndex&) const {
-  return file_.isEmpty() ? titles_.count() : titles_.value(file_).count();
-}
-
-QVariant Model::data(const QModelIndex& index, int role) const {
-  switch (role) {
-    case Qt::DisplayRole:
-      if (file_.isEmpty()) {
-        return (titles_.cbegin() + index.row()).key();
-      } else {
-        auto it = currentData_->cbegin() + index.row();
-        return QStringLiteral("**%1**\n%2").arg(it.key(), it.value().first);
-      }
-
-    case Qt::BackgroundRole:
-      if (index.row() == currentIndex_.row()) {
-        return QColor(QStringLiteral("royalblue"));
-      }
-      break;
-
-    default:
-      break;
-  }
-  return {};
-}
-
-void HtmlDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                         const QModelIndex& index) const {
-  QStyleOptionViewItem options = option;
-  initStyleOption(&options, index);
-
-  painter->save();
-
-  QTextDocument doc;
-  doc.setMarkdown(options.text);
-
-  options.text.clear();
-  options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options,
-                                       painter);
-
-  // shift text right to make icon visible
-  QSize iconSize = options.icon.actualSize(options.rect.size());
-  painter->translate(options.rect.left() + iconSize.width(),
-                     options.rect.top());
-  QRect clip(0, 0, options.rect.width() + iconSize.width(),
-             options.rect.height());
-
-  // doc.drawContents(painter, clip);
-
-  painter->setClipRect(clip);
-  QAbstractTextDocumentLayout::PaintContext ctx;
-  // set text color to red for selected item
-  if (option.state & QStyle::State_Selected)
-    ctx.palette.setColor(QPalette::Text, QColor("red"));
-  ctx.clip = clip;
-  doc.documentLayout()->draw(painter, ctx);
-
-  painter->restore();
-}
-
-QSize HtmlDelegate::sizeHint(const QStyleOptionViewItem& option,
-                             const QModelIndex& index) const {
-  QStyleOptionViewItem options = option;
-  initStyleOption(&options, index);
-
-  QTextDocument doc;
-  doc.setMarkdown(options.text);
-  doc.setTextWidth(options.rect.width());
-  return {int(doc.idealWidth()), int(doc.size().height())};
-}
-#include <QDebug>
-
-IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
-    : QFrame(parent, flags),
-      input_(new QLineEdit(this)),
-      list_(new QListView(this)),
-      model_(new Model(this)),
-      filter_(new QSortFilterProxyModel(list_)) {
-  auto layout = new QVBoxLayout(this);
-
-  input_->setStyleSheet(kStyleSheets);
-  input_->installEventFilter(this);
-  layout->addWidget(input_);
-
-  auto line = new QFrame(this);
-  line->setFrameShape(QFrame::HLine);
-  line->setFrameShadow(QFrame::Sunken);
-  layout->addWidget(line);
-
-  filter_->setSourceModel(model_);
-  filter_->setFilterCaseSensitivity(Qt::CaseInsensitive);
-  list_->setModel(filter_);
-  auto delegate = new HtmlDelegate;
-  delegate->model_ = model_;
-  list_->setItemDelegate(delegate);
-  list_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  list_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  list_->setStyleSheet(kStyleSheets);
-  list_->setSelectionMode(QAbstractItemView::NoSelection);
-  layout->addWidget(list_);
-
-  connect(input_, &QLineEdit::textChanged, input_, [this](const QString& text) {
-    filter_->setFilterFixedString(text);
-    model_->Select(filter_->mapToSource(filter_->index(0, 0)));
-  });
-}
-
-void IndexFile(const QFileInfo& fileInfo,
-               QMultiMap<QString, QPair<QString, QString>>* titleMap,
-               std::atomic<size_t>* count) {
+void IndexLauncherPrivate::IndexFile(
+    const QFileInfo& fileInfo,
+    QMultiHash<QString, QPair<QString, QString>>* titleMap,
+    std::atomic<size_t>* count) {
   QFile file{fileInfo.absoluteFilePath()};
   if (!file.open(QFile::ReadOnly | QFile::Text)) {
     return;
@@ -349,7 +196,195 @@ void IndexFile(const QFileInfo& fileInfo,
   }
 }
 
+void IndexLauncherPrivate::UpdateIndexes(
+    const QFileInfoList& files,
+    const QVector<QMultiHash<QString, QPair<QString, QString>>>& titles) {
+  QSignalBlocker blocker(input_);
+  beginResetModel();
+  for (int i = 0; i < files.count(); ++i) {
+    titles_[files.at(i).completeBaseName()] = titles.at(i);
+  }
+  currentFile_.clear();
+  input_->clear();
+  endResetModel();
+  filter_->sort(0);
+}
+
+bool IndexLauncherPrivate::SelectFile(const QString& file) {
+  input_->setText(file);
+  beginResetModel();
+  auto it = titles_.find(file);
+  currentFile_ = (it == titles_.cend()) ? QString{} : file;
+  input_->setPlaceholderText(
+      (it == titles_.cend())
+          ? IndexLauncher::tr("Please enter file name or class name")
+          : IndexLauncher::tr("Please enter title"));
+  endResetModel();
+  filter_->sort(0);
+  return it != titles_.cend();
+}
+
+void IndexLauncherPrivate::Select(int row) {
+  auto index = filter_->index(row, 0);
+  if (index.isValid()) {
+    list_->selectionModel()->select(index, QItemSelectionModel::SelectCurrent);
+    list_->scrollTo(index);
+  }
+}
+
+QString IndexLauncherPrivate::CurrentFile() const {
+  auto index = CurrentIndex();
+  if (!index.isValid()) {
+    // Fetch file name from previouts output ../../x/xxx/xxx.md#xxx
+    auto list = input_->text().split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    if (!list.isEmpty()) {
+      list = list.last().split(QLatin1Char('\\'), Qt::SkipEmptyParts);
+    }
+    if (!list.isEmpty()) {
+      list = list.first().split(QLatin1Char('#'), Qt::SkipEmptyParts);
+    }
+    return list.isEmpty() ? QString{} : list.first();
+  }
+  index = filter_->mapToSource(index);
+  auto it = titles_.cbegin();
+  std::advance(it, index.row());
+  return it.key();
+}
+
+QString IndexLauncherPrivate::CurrentTitle() const {
+  if (currentFile_.isEmpty()) {
+    return {};
+  }
+  auto index = CurrentIndex();
+  if (!index.isValid()) {
+    return QString{};
+  } else {
+    auto it = titles_[currentFile_].cbegin();
+    std::advance(it, filter_->mapToSource(index).row());
+    return it->second;
+  }
+}
+
+QModelIndex IndexLauncherPrivate::CurrentIndex() const {
+  auto selected = list_->selectionModel()->selectedIndexes();
+  return selected.isEmpty() ? QModelIndex{} : selected.first();
+}
+
+int IndexLauncherPrivate::rowCount(const QModelIndex&) const {
+  return currentFile_.isEmpty() ? titles_.count()
+                                : titles_[currentFile_].count();
+}
+
+QVariant IndexLauncherPrivate::data(const QModelIndex& index, int role) const {
+  switch (role) {
+    case Qt::DisplayRole:
+      if (currentFile_.isEmpty()) {
+        auto it = titles_.cbegin();
+        std::advance(it, index.row());
+        return it.key();
+      } else {
+        auto it = titles_[currentFile_].cbegin();
+        std::advance(it, index.row());
+        return QStringLiteral("**%1**\n%2").arg(it.key(), it->first);
+      }
+
+    default:
+      break;
+  }
+  return {};
+}
+
+void IndexLauncherPrivate::paint(QPainter* painter,
+                                 const QStyleOptionViewItem& option,
+                                 const QModelIndex& index) const {
+  QStyleOptionViewItem options = option;
+  initStyleOption(&options, index);
+
+  painter->save();
+
+  QTextDocument doc;
+  doc.setMarkdown(options.text);
+
+  options.text.clear();
+  options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options,
+                                       painter);
+
+  // shift text right to make icon visible
+  QSize iconSize = options.icon.actualSize(options.rect.size());
+  painter->translate(options.rect.left() + iconSize.width(),
+                     options.rect.top());
+  QRect clip(0, 0, options.rect.width() + iconSize.width(),
+             options.rect.height());
+
+  // doc.drawContents(painter, clip);
+
+  painter->setClipRect(clip);
+  QAbstractTextDocumentLayout::PaintContext ctx;
+  // set text color to red for selected item
+  //  if (option.state & QStyle::State_Selected)
+  //    ctx.palette.setColor(QPalette::Text, QColor("red"));
+  ctx.clip = clip;
+  doc.documentLayout()->draw(painter, ctx);
+
+  painter->restore();
+}
+
+QSize IndexLauncherPrivate::sizeHint(const QStyleOptionViewItem& option,
+                                     const QModelIndex& index) const {
+  QStyleOptionViewItem options = option;
+  initStyleOption(&options, index);
+
+  QTextDocument doc;
+  doc.setMarkdown(options.text);
+  doc.setTextWidth(options.rect.width());
+  return {int(doc.idealWidth()), int(doc.size().height())};
+}
+/* ================ IndexLauncherPrivate ================ */
+
+/* ================ IndexLauncher ================ */
+IndexLauncher::IndexLauncher(QWidget* parent, Qt::WindowFlags flags)
+    : QFrame(*(new IndexLauncherPrivate), parent, flags) {
+  Q_D(IndexLauncher);
+
+  d->input_ = new QLineEdit(this);
+  d->list_ = new QListView(this);
+  d->filter_ = new QSortFilterProxyModel(this);
+
+  auto layout = new QVBoxLayout(this);
+
+  d->input_->setStyleSheet(kStyleSheets);
+  d->input_->installEventFilter(this);
+  layout->addWidget(d->input_);
+
+  auto line = new QFrame(this);
+  line->setFrameShape(QFrame::HLine);
+  line->setFrameShadow(QFrame::Sunken);
+  layout->addWidget(line);
+
+  d->filter_->setSourceModel(d);
+  d->filter_->setFilterCaseSensitivity(Qt::CaseInsensitive);
+  d->list_->setModel(d->filter_);
+  d->list_->setItemDelegate(d);
+  auto palette = d->list_->palette();
+  palette.setColor(QPalette::Highlight, QColor(QStringLiteral("royalblue")));
+  d->list_->setPalette(palette);
+  d->list_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  d->list_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  d->list_->setStyleSheet(kStyleSheets);
+  d->list_->setSelectionMode(QAbstractItemView::NoSelection);
+  layout->addWidget(d->list_);
+
+  connect(d->input_, &QLineEdit::textChanged, this,
+          [this](const QString& text) {
+            Q_D(IndexLauncher);
+            d->filter_->setFilterFixedString(text);
+            d->Select(0);
+          });
+}
+
 size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
+  Q_D(IndexLauncher);
+
   hide();
 
   std::vector<std::future<void>> futures;
@@ -363,13 +398,13 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   progress.show();
 
   // Add tasks to thread pool
-  QVector<QMultiMap<QString, QPair<QString, QString>>> titles;
+  QVector<QMultiHash<QString, QPair<QString, QString>>> titles;
   titles.resize(files.count());
   futures.reserve(files.count());
   auto now = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < files.count(); ++i) {
     futures.emplace_back(ThreadPool::default_pool().AddTask(
-        IndexFile, files.at(i), &titles[i], &count));
+        IndexLauncherPrivate::IndexFile, files.at(i), &titles[i], &count));
     if ((std::chrono::high_resolution_clock::now() - now) > kFrameInterval) {
       QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
       now = std::chrono::high_resolution_clock::now();
@@ -390,9 +425,9 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
   }
 
   // Add result to model
-  model_->UpdateIndexes(files, titles);
+  d->UpdateIndexes(files, titles);
 
-  // Item height for first display is wrong, so trigger & hide to avoid it.
+  // Item height for first display is wrong, so trigger & hide to recalculate.
   Trigger();
   hide();
 
@@ -400,42 +435,49 @@ size_t IndexLauncher::IndexFiles(const QFileInfoList& files) {
 }
 
 void IndexLauncher::Trigger() {
+  Q_D(IndexLauncher);
+
+  // Copy selected link
   if (isVisible()) {
-    if (model_->file_.isEmpty()) {
-      QString filePath = model_->currentIndex_.data().toString();
+    if (d->currentFile_.isEmpty()) {  // File selection mode
       QGuiApplication::clipboard()->setText(
-          FilePath(filePath.isEmpty() ? input_->text() : filePath));
-    } else {
+          IndexLauncherPrivate::FilePath(d->CurrentFile()));
+    } else {  // Title selection mode
       QGuiApplication::clipboard()->setText(QStringLiteral("#") +
-                                            model_->CurrentTitle());
-      hide();
+                                            d->CurrentTitle());
     }
     hide();
     return;
   }
 
-  model_->SelectFile(QString{});
+  // Clear selection
+  d->SelectFile(QString{});
+
+  // Update selection from user's clipboard
   QStringList list = QGuiApplication::clipboard()->text().split(
       QStringLiteral("::"), Qt::SkipEmptyParts);
-  QString file = list.first();
-  if (IsValidFile(file)) {
-    if (list.count() > 1) {
-      if (model_->SelectFile(file)) {
-        input_->setText(list.at(1));
+  QString file = list.isEmpty() ? QString{} : list.first();
+  if (IndexLauncherPrivate::IsQtClassName(file)) {  // Valid class name
+    if (list.count() > 1) {  // Has title
+      if (d->SelectFile(file)) {  // File is valid
+        d->input_->setText(list.at(1));
       }
-    } else {
-      input_->setText(file);
+    } else { // File only
+      d->input_->setText(file);
     }
-  } else {
-    input_->clear();
+  } else if (file.endsWith(QStringLiteral(".md"))) {  // .md file
+    d->input_->setText(file.mid(0, file.length() - 3));
+  } else {  // Invalid clipboard text
+    d->input_->setText(file);
   }
-  input_->setPlaceholderText(tr("Please enter file name or class name"));
-  emit input_->textChanged(input_->text());
+  emit d->input_->textChanged(d->input_->text());
 
+  // Launch GUI
   show();
   QWidget::raise();
-  input_->setFocus();
+  d->input_->setFocus();
 
+  // Move to screen center
   QWindow* window = windowHandle();
   if (window) {
     QScreen* screen = window->screen();
@@ -451,7 +493,9 @@ void IndexLauncher::Trigger() {
 bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
   static constexpr int kPageIndexes = 5;
 
-  if (event->type() == QEvent::KeyRelease) {
+  Q_D(IndexLauncher);
+
+  if (event->type() == QEvent::KeyPress) {
     auto e = dynamic_cast<QKeyEvent*>(event);
     switch (e->key()) {
       case Qt::Key_Escape:
@@ -459,40 +503,42 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
         break;
 
       case Qt::Key_Up: {
-        int row = filter_->mapFromSource(model_->currentIndex_).row() - 1;
-        row = (row < 0) ? (filter_->rowCount() - 1) : row;
-        model_->Select(filter_->mapToSource(filter_->index(row, 0)));
+        int row = d->CurrentIndex().row() - 1;
+        row = (row < 0) ? (d->filter_->rowCount() - 1) : row;
+        d->Select(row);
       } break;
 
       case Qt::Key_Down: {
-        int row = filter_->mapFromSource(model_->currentIndex_).row() + 1;
-        row %= filter_->rowCount();
-        model_->Select(filter_->mapToSource(filter_->index(row, 0)));
+        int row = d->CurrentIndex().row() + 1;
+        row %= d->filter_->rowCount();
+        d->Select(row);
       } break;
 
       case Qt::Key_PageUp: {
-        int row =
-            filter_->mapFromSource(model_->currentIndex_).row() - kPageIndexes;
+        int row = d->CurrentIndex().row() - kPageIndexes;
         row = (row < 0) ? 0 : row;
-        model_->Select(filter_->mapToSource(filter_->index(row, 0)));
+        d->Select(row);
       } break;
 
       case Qt::Key_PageDown: {
-        int row =
-            filter_->mapFromSource(model_->currentIndex_).row() + kPageIndexes;
-        row = (row >= filter_->rowCount()) ? (filter_->rowCount() - 1) : row;
-        model_->Select(filter_->mapToSource(filter_->index(row, 0)));
+        int row = d->CurrentIndex().row() + kPageIndexes;
+        row = (row >= d->filter_->rowCount()) ? (d->filter_->rowCount() - 1)
+                                              : row;
+        d->Select(row);
       } break;
 
       case Qt::Key_Return:
       case Qt::Key_Enter: {
-        if (model_->file_.isEmpty()) {
-          model_->SelectFile(model_->currentIndex_.data().toString());
-          input_->setPlaceholderText(tr("Please enter title"));
-          input_->clear();
-        } else {
+        if (d->currentFile_.isEmpty()) {  // File selection mode
+          auto index = d->CurrentIndex();
+          if (index.isValid()) {
+            d->SelectFile(index.data().toString());
+            d->input_->clear();
+          }
+        } else {  // Title selection mode
           QGuiApplication::clipboard()->setText(QStringLiteral("%1#%2").arg(
-              FilePath(model_->file_), model_->CurrentTitle()));
+              IndexLauncherPrivate::FilePath(d->CurrentFile()),
+              d->CurrentTitle()));
           hide();
         }
       } break;
@@ -503,3 +549,4 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
   }
   return QFrame::eventFilter(object, event);
 }
+/* ================ IndexLauncher ================ */
