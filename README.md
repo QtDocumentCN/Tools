@@ -22,7 +22,9 @@
 
 # 安装
 
-1. pip3 install git+https://github.com/QtDocumentCN/Tools/qmlf
+``` bash
+pip3 install -e "git+https://github.com/QtDocumentCN/Tools.git#egg=qmlf&subdirectory=qmlf"
+```
 
 # 使用
 
