@@ -119,11 +119,11 @@ void IndexLauncherPrivate::IndexFile(
     line = line.trimmed();
     // QString raw = line;
 
-    // Remove syntax and strings * = " \ ' /
+    // Remove syntax and strings * = " \ ' / `
     // [\*\=\"\\\'\/]
     static const auto kSyntaxRegexp = [] {
       auto regexp =
-          QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/]")};
+          QRegularExpression{QStringLiteral("[\\*\\=\\\"\\\\\\'\\/\\`]")};
       regexp.optimize();
       return regexp;
     }();
@@ -443,8 +443,8 @@ void IndexLauncher::Trigger() {
       QGuiApplication::clipboard()->setText(
           IndexLauncherPrivate::FilePath(d->CurrentFile()));
     } else {  // Title selection mode
-      QGuiApplication::clipboard()->setText(QStringLiteral("#") +
-                                            d->CurrentTitle());
+      QGuiApplication::clipboard()->setText(
+          QStringLiteral("#") + d->CurrentTitle().toUtf8().toPercentEncoding());
     }
     hide();
     return;
@@ -538,7 +538,7 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
         } else {  // Title selection mode
           QGuiApplication::clipboard()->setText(QStringLiteral("%1#%2").arg(
               IndexLauncherPrivate::FilePath(d->currentFile_),
-              d->CurrentTitle()));
+              d->CurrentTitle().toUtf8().toPercentEncoding()));
           hide();
         }
       } break;
