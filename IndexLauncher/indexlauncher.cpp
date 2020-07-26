@@ -48,7 +48,7 @@ class IndexLauncherPrivate : public QFramePrivate,
   static bool IsQtClassName(const QString& file);
   static QString FilePath(QString file);
   static void IndexFile(const QFileInfo& fileInfo,
-                        QMultiHash<QString, QPair<QString, QString> > *titleMap,
+                        QMultiHash<QString, QPair<QString, QString>>* titleMap,
                         std::atomic<size_t>* count);
 
   void UpdateIndexes(
@@ -233,7 +233,7 @@ void IndexLauncherPrivate::Select(int row) {
 }
 
 QString IndexLauncherPrivate::CurrentFile() const {
-  auto index = CurrentIndex();
+  QModelIndex index = CurrentIndex();
   if (!index.isValid()) {
     // Fetch file name from previouts output ../../x/xxx/xxx.md#xxx
     auto list = input_->text().split(QLatin1Char('/'), Qt::SkipEmptyParts);
@@ -458,11 +458,11 @@ void IndexLauncher::Trigger() {
       QStringLiteral("::"), Qt::SkipEmptyParts);
   QString file = list.isEmpty() ? QString{} : list.first();
   if (IndexLauncherPrivate::IsQtClassName(file)) {  // Valid class name
-    if (list.count() > 1) {  // Has title
-      if (d->SelectFile(file)) {  // File is valid
+    if (list.count() > 1) {                         // Has title
+      if (d->SelectFile(file)) {                    // File is valid
         d->input_->setText(list.at(1));
       }
-    } else { // File only
+    } else {  // File only
       d->input_->setText(file);
     }
   } else if (file.endsWith(QStringLiteral(".md"))) {  // .md file
@@ -537,7 +537,7 @@ bool IndexLauncher::eventFilter(QObject* object, QEvent* event) {
           }
         } else {  // Title selection mode
           QGuiApplication::clipboard()->setText(QStringLiteral("%1#%2").arg(
-              IndexLauncherPrivate::FilePath(d->CurrentFile()),
+              IndexLauncherPrivate::FilePath(d->currentFile_),
               d->CurrentTitle()));
           hide();
         }
