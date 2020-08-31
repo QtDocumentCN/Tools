@@ -1,5 +1,6 @@
 #include <functional>
 
+#include <QtCore/QDateTime>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFileInfo>
 #include <QtCore/QLocale>
@@ -212,19 +213,21 @@ int main(int argc, char* argv[]) {
   };
 
   // Action - index path
+  QMap<QString, QDateTime> fileTimes;
   QObject::connect(
       menu.addAction(IndexLauncher::tr("&Indexing path...")),
-      &QAction::triggered, &menu, [&settings, &tray, &launcher] {
+      &QAction::triggered, &menu, [&settings, &tray, &launcher, &fileTimes] {
         // Recursively traverse dirctory tree
-        std::function<void(QFileInfoList&, const QString&)> Traversal =
-            [&Traversal](QFileInfoList& files, const QString& d) {
+        std::function<void(QMap<QString, QDateTime>&, const QString&)> Traversal =
+            [&Traversal](QMap<QString, QDateTime>& fileTimes, const QString& d) {
               QFileInfoList list = QDir{d}.entryInfoList(
                   QDir::NoDotAndDotDot | QDir::Files | QDir::Dirs);
               for (auto&& info : list) {
                 if (info.isFile()) {
-                  files << info;
+                  fileTimes[info.absoluteFilePath()] =
+                      info.fileTime(QFile::FileModificationTime);
                 } else if (info.isDir()) {
-                  Traversal(files, info.absoluteFilePath());
+                  Traversal(fileTimes, info.absoluteFilePath());
                 }
               }
             };
@@ -234,18 +237,28 @@ int main(int argc, char* argv[]) {
         QString d = QFileDialog::getExistingDirectory(
             nullptr, IndexLauncher::tr("Indexing path"), dir);
         if (!d.isEmpty()) {
-          QFileInfoList files;
           dir = d;
           settings.setValue(kDir, d);
           settings.sync();
-          Traversal(files, d);
+          QMap<QString, QDateTime> newFileTimes;
+          Traversal(newFileTimes, d);
+          QFileInfoList files;
+          for (auto it = newFileTimes.cbegin(); it != newFileTimes.cend(); ++it) {
+            auto oldFileTime = fileTimes.find(it.key());
+            if ((oldFileTime != fileTimes.cend()) &&
+                (oldFileTime.value() == it.value())) {
+              continue;
+            }
+            files << QFileInfo{it.key()};
+          }
+          fileTimes = newFileTimes;
           QElapsedTimer timer;
           timer.start();
           size_t count = launcher.IndexFiles(files);
           tray.showMessage(
               IndexLauncher::tr("Markdown Index Launcher"),
               IndexLauncher::tr(
-                  "Index finised for %1 files with %2 titles in %3 ms")
+                  "Index finished for %1 new files with %2 titles in %3 ms")
                   .arg(files.count())
                   .arg(count)
                   .arg(timer.elapsed()),

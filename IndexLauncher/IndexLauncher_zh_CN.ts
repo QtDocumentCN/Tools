@@ -4,71 +4,66 @@
 <context>
     <name>IndexLauncher</name>
     <message>
-        <location filename="indexlauncher.cpp" line="401"/>
+        <location filename="indexlauncher.cpp" line="220"/>
         <source>Please enter file name or class name</source>
         <translation>请输入文件名/类名</translation>
     </message>
     <message>
-        <location filename="indexlauncher.cpp" line="460"/>
+        <location filename="indexlauncher.cpp" line="221"/>
         <source>Please enter title</source>
         <translation>请输入标题</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="63"/>
+        <location filename="main.cpp" line="64"/>
         <source># Markdown Index Launcher
 </source>
         <translation># Markdown 索引工具
 </translation>
     </message>
     <message>
-        <location filename="main.cpp" line="201"/>
-        <location filename="main.cpp" line="206"/>
-        <location filename="main.cpp" line="246"/>
+        <location filename="main.cpp" line="202"/>
+        <location filename="main.cpp" line="207"/>
+        <location filename="main.cpp" line="259"/>
         <source>Markdown Index Launcher</source>
         <translation>Markdown 索引工具</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="202"/>
+        <location filename="main.cpp" line="203"/>
         <source>Hotkey %1 is already used!</source>
         <translation>快捷键 %1 已被占用！</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="207"/>
+        <location filename="main.cpp" line="208"/>
         <source>Hotkey is set to %1</source>
         <translation>快捷键已设置为 %1</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="216"/>
+        <location filename="main.cpp" line="218"/>
         <source>&amp;Indexing path...</source>
         <translation>索引路径(&amp;I)...</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="235"/>
+        <location filename="main.cpp" line="238"/>
         <source>Indexing path</source>
         <translation>索引路径</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="247"/>
-        <source>Index finised for %1 files with %2 titles in %3 ms</source>
-        <translation>索引完成，共 %1 个文件，%2 个标题，耗时 %3 毫秒</translation>
-    </message>
-    <message>
-        <location filename="main.cpp" line="258"/>
+        <location filename="main.cpp" line="271"/>
         <source>&amp;Set hotkey</source>
         <translation>设置快捷键(&amp;S)</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="298"/>
+        <location filename="main.cpp" line="311"/>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="49"/>
+        <location filename="main.cpp" line="50"/>
         <source>Help</source>
         <translation>帮助</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="71"/>
+        <location filename="main.cpp" line="72"/>
         <source>This tool can index markdown files, and help you to search titles, retrieve it&apos;s link into clipboard.
 
 ----
@@ -140,22 +135,27 @@ Copyleft [QtDocumentCN](%2) with [3-Clause BSD License](%3).</oldsource>
 版权所有 [QtDocumentCN](%2)，采用 [BSD-3-Clause](%3) 协议。</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="98"/>
+        <location filename="main.cpp" line="99"/>
         <source>About &amp;Qt...</source>
         <translation>关于&amp;Qt...</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="102"/>
+        <location filename="main.cpp" line="103"/>
         <source>&amp;Ok</source>
         <translation>确认(&amp;O)</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="303"/>
+        <location filename="main.cpp" line="260"/>
+        <source>Index finished for %1 new files with %2 titles in %3 ms</source>
+        <translation>索引完成，新增 %1 个文件，%2 个标题，耗时 %3 毫秒</translation>
+    </message>
+    <message>
+        <location filename="main.cpp" line="316"/>
         <source>Ho&amp;mepage</source>
         <translation>主页(&amp;M)</translation>
     </message>
     <message>
-        <location filename="main.cpp" line="308"/>
+        <location filename="main.cpp" line="321"/>
         <source>&amp;Quit</source>
         <translation>退出(&amp;Q)</translation>
     </message>
