@@ -26,11 +26,13 @@ CONFIG += c++14
 
 SOURCES += \
         bookgeneraterkit.cpp \
+        hexoaddtitle.cpp \
         main.cpp \
         mainwindow.cpp
 
 HEADERS += \
         bookgeneraterkit.h \
+        hexoaddtitle.h \
         mainwindow.h
 
 FORMS += \

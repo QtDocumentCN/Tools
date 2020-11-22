@@ -17,6 +17,7 @@ public:
 
 public slots:
 	void selectCnFolder();
+	void addText();
 
 private:
 	Ui::MainWindow *ui;

@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include "bookgeneraterkit.h"
+#include "hexoaddtitle.h"
 
 #include <QFileDialog>
 #include <QStandardPaths>
@@ -13,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 	ui->setupUi(this);
 	connect(ui->pushButton, SIGNAL(clicked()), this, SLOT(selectCnFolder()));
+	connect(ui->btnAddTitle, SIGNAL(clicked()), this, SLOT(addText()));
 }
 
 MainWindow::~MainWindow()
@@ -29,6 +31,22 @@ void MainWindow::selectCnFolder()
 	{
 		BookGeneraterKit kit(docCnPath, this);
 		kit.generaterSummary();
+	}
+	else
+	{
+		QMessageBox::information(NULL, "Warrning", "Please Slect QtDocument Folder");
+	}
+}
+
+void MainWindow::addText()
+{
+	QString desktopPath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+	QString docCnPath = QFileDialog::getExistingDirectory(NULL, "test", desktopPath);
+	docCnPath = QFileInfo(docCnPath).absoluteFilePath();
+	if (!docCnPath.isEmpty() && docCnPath.endsWith("QtDocumentCN") )
+	{
+		HexoAddTitle kit(docCnPath, this);
+		kit.addTitle();
 	}
 	else
 	{

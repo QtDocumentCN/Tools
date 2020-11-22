@@ -30,6 +30,19 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="btnAddTitle">
+        <property name="minimumSize">
+         <size>
+          <width>30</width>
+          <height>100</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Add Title</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
