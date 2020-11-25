@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QFileInfo>
 
 class HexoAddTitle : public QObject
 {
@@ -18,10 +19,13 @@ signals:
 private:
 	void initPath();
 
+	void seekTitle();
+	void ensureTitle(const QFileInfo& fileInfo);
+
 
 private:
 	QString m_docCnPath;
-	QString m_newPath;
+	QString m_newPath; //拷贝出来的文件夹
 };
 
 #endif // HEXOADDTITLE_H
